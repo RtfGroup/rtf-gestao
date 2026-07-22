@@ -7,14 +7,20 @@ import {
   ListItemIcon,
   ListItemText,
   Toolbar,
-  
 } from '@mui/material'
+
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import InventoryIcon from '@mui/icons-material/Inventory'
+import CategoryIcon from '@mui/icons-material/Category'
 import PeopleIcon from '@mui/icons-material/People'
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+
+import {
+  Outlet,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom'
 
 const larguraMenu = 240
 
@@ -37,22 +43,22 @@ function MainLayout() {
           },
         }}
       >
-<Toolbar
-  sx={{
-    display: 'flex',
-    justifyContent: 'center',
-    py: 2,
-  }}
->
-  <img
-    src={logo}
-    alt="RTF Group"
-    style={{
-      width: 160,
-      objectFit: 'contain',
-    }}
-  />
-</Toolbar>
+        <Toolbar
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            py: 2,
+          }}
+        >
+          <img
+            src={logo}
+            alt="RTF Group"
+            style={{
+              width: 160,
+              objectFit: 'contain',
+            }}
+          />
+        </Toolbar>
 
         <List>
           <ListItemButton
@@ -73,6 +79,16 @@ function MainLayout() {
               <InventoryIcon />
             </ListItemIcon>
             <ListItemText primary="Produtos" />
+          </ListItemButton>
+
+          <ListItemButton
+            selected={location.pathname === '/categorias'}
+            onClick={() => navigate('/categorias')}
+          >
+            <ListItemIcon sx={{ color: '#fff' }}>
+              <CategoryIcon />
+            </ListItemIcon>
+            <ListItemText primary="Categorias" />
           </ListItemButton>
 
           <ListItemButton>
