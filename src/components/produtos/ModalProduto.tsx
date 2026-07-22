@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Alert,
   Button,
@@ -9,16 +9,22 @@ import {
   TextField,
 } from '@mui/material'
 
-import { criarProduto } from '../../services/produtos'
+import type { Produto } from './TabelaProdutos'
+import {
+  atualizarProduto,
+  criarProduto,
+} from '../../services/produtos'
 
 type ModalProdutoProps = {
   aberto: boolean
+  produto: Produto | null
   aoFechar: () => void
   aoSalvar: () => void
 }
 
 function ModalProduto({
   aberto,
+  produto,
   aoFechar,
   aoSalvar,
 }: ModalProdutoProps) {
@@ -26,6 +32,18 @@ function ModalProduto({
   const [descricao, setDescricao] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+
+  useEffect(() => {
+    if (produto) {
+      setNome(produto.nome ?? '')
+      setDescricao(produto.descricao ?? '')
+    } else {
+      setNome('')
+      setDescricao('')
+    }
+
+    setErro('')
+  }, [produto, aberto])
 
   function limparFormulario() {
     setNome('')
@@ -48,13 +66,20 @@ function ModalProduto({
       setSalvando(true)
       setErro('')
 
-      await criarProduto({
-        nome: nome.trim(),
-        descricao: descricao.trim(),
-      })
+      if (produto?.id) {
+        await atualizarProduto(produto.id, {
+          nome: nome.trim(),
+          descricao: descricao.trim(),
+        })
+      } else {
+        await criarProduto({
+          nome: nome.trim(),
+          descricao: descricao.trim(),
+        })
+      }
 
       limparFormulario()
-      aoSalvar()
+      await aoSalvar()
       aoFechar()
     } catch (error) {
       console.error('Erro ao salvar produto:', error)
@@ -76,7 +101,9 @@ function ModalProduto({
       fullWidth
       maxWidth="sm"
     >
-      <DialogTitle>Novo Produto</DialogTitle>
+      <DialogTitle>
+        {produto ? 'Editar Produto' : 'Novo Produto'}
+      </DialogTitle>
 
       <DialogContent>
         {erro && (

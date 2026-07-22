@@ -58,3 +58,24 @@ export async function criarProduto(produto: NovoProduto) {
 
   return data
 }
+
+export async function atualizarProduto(
+  produtoId: string,
+  produto: NovoProduto,
+) {
+  const { data, error } = await supabase
+    .from('produtos')
+    .update({
+      nome: produto.nome,
+      descricao: produto.descricao || null,
+    })
+    .eq('id', produtoId)
+    .select()
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}

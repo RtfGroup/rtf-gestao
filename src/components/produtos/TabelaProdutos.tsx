@@ -1,4 +1,6 @@
+import EditIcon from '@mui/icons-material/Edit'
 import {
+  IconButton,
   Paper,
   Table,
   TableBody,
@@ -6,13 +8,15 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Tooltip,
   Typography,
 } from '@mui/material'
 
-type Produto = {
+export type Produto = {
   id?: string
   codigo?: string
   nome?: string
+  descricao?: string
   categoria?: string
   estoque?: number
   preco_venda?: number
@@ -20,9 +24,13 @@ type Produto = {
 
 type TabelaProdutosProps = {
   produtos: Produto[]
+  aoEditar: (produto: Produto) => void
 }
 
-function TabelaProdutos({ produtos }: TabelaProdutosProps) {
+function TabelaProdutos({
+  produtos,
+  aoEditar,
+}: TabelaProdutosProps) {
   return (
     <TableContainer component={Paper}>
       <Table>
@@ -53,13 +61,27 @@ function TabelaProdutos({ produtos }: TabelaProdutosProps) {
                 <TableCell>{produto.nome ?? '-'}</TableCell>
                 <TableCell>{produto.categoria ?? '-'}</TableCell>
                 <TableCell>{produto.estoque ?? 0}</TableCell>
+
                 <TableCell>
-                  {Number(produto.preco_venda ?? 0).toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
+                  {Number(produto.preco_venda ?? 0).toLocaleString(
+                    'pt-BR',
+                    {
+                      style: 'currency',
+                      currency: 'BRL',
+                    },
+                  )}
                 </TableCell>
-                <TableCell>-</TableCell>
+
+                <TableCell>
+                  <Tooltip title="Editar produto">
+                    <IconButton
+                      onClick={() => aoEditar(produto)}
+                      aria-label="Editar produto"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                  </Tooltip>
+                </TableCell>
               </TableRow>
             ))
           )}
