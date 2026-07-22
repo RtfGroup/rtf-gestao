@@ -79,3 +79,14 @@ export async function atualizarProduto(
 
   return data
 }
+
+export async function excluirProduto(produtoId: string) {
+  const { error } = await supabase
+    .from('produtos')
+    .delete()
+    .eq('id', produtoId)
+
+  if (error) {
+    throw error
+  }
+}

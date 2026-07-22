@@ -1,4 +1,5 @@
 import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
 import {
   IconButton,
   Paper,
@@ -25,11 +26,13 @@ export type Produto = {
 type TabelaProdutosProps = {
   produtos: Produto[]
   aoEditar: (produto: Produto) => void
+  aoExcluir: (produto: Produto) => void
 }
 
 function TabelaProdutos({
   produtos,
   aoEditar,
+  aoExcluir,
 }: TabelaProdutosProps) {
   return (
     <TableContainer component={Paper}>
@@ -76,9 +79,18 @@ function TabelaProdutos({
                   <Tooltip title="Editar produto">
                     <IconButton
                       onClick={() => aoEditar(produto)}
-                      aria-label="Editar produto"
+                      color="primary"
                     >
                       <EditIcon />
+                    </IconButton>
+                  </Tooltip>
+
+                  <Tooltip title="Excluir produto">
+                    <IconButton
+                      onClick={() => aoExcluir(produto)}
+                      color="error"
+                    >
+                      <DeleteIcon />
                     </IconButton>
                   </Tooltip>
                 </TableCell>

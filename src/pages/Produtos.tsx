@@ -1,11 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Box, Button, Typography } from '@mui/material'
+import {
+  Alert,
+  Box,
+  Button,
+  Snackbar,
+  Typography,
+} from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 
 import TabelaProdutos from '../components/produtos/TabelaProdutos'
 import type { Produto } from '../components/produtos/TabelaProdutos'
 import ModalProduto from '../components/produtos/ModalProduto'
-import { listarProdutos } from '../services/produtos'
+import {
+  excluirProduto,
+  listarProdutos,
+} from '../services/produtos'
 
 function Produtos() {
   const [produtos, setProdutos] = useState<Produto[]>([])
@@ -13,12 +22,16 @@ function Produtos() {
   const [produtoEditando, setProdutoEditando] =
     useState<Produto | null>(null)
 
+  const [mensagem, setMensagem] = useState('')
+  const [erro, setErro] = useState('')
+
   const carregarProdutos = useCallback(async () => {
     try {
       const dados = await listarProdutos()
       setProdutos(dados ?? [])
     } catch (error) {
       console.error('Erro ao buscar produtos:', error)
+      setErro('Não foi possível carregar os produtos.')
     }
   }, [])
 
@@ -34,6 +47,30 @@ function Produtos() {
   function novoProduto() {
     setProdutoEditando(null)
     setModalAberto(true)
+  }
+
+  async function removerProduto(produto: Produto) {
+    if (!produto.id) {
+      setErro('Produto sem identificação.')
+      return
+    }
+
+    const confirmou = window.confirm(
+      `Tem certeza que deseja excluir o produto "${produto.nome ?? ''}"?`,
+    )
+
+    if (!confirmou) {
+      return
+    }
+
+    try {
+      await excluirProduto(produto.id)
+      await carregarProdutos()
+      setMensagem('Produto excluído com sucesso.')
+    } catch (error) {
+      console.error('Erro ao excluir produto:', error)
+      setErro('Não foi possível excluir o produto.')
+    }
   }
 
   return (
@@ -66,6 +103,7 @@ function Produtos() {
       <TabelaProdutos
         produtos={produtos}
         aoEditar={editarProduto}
+        aoExcluir={removerProduto}
       />
 
       <ModalProduto
@@ -74,6 +112,32 @@ function Produtos() {
         aoFechar={() => setModalAberto(false)}
         aoSalvar={carregarProdutos}
       />
+
+      <Snackbar
+        open={Boolean(mensagem)}
+        autoHideDuration={3000}
+        onClose={() => setMensagem('')}
+      >
+        <Alert
+          severity="success"
+          onClose={() => setMensagem('')}
+        >
+          {mensagem}
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={Boolean(erro)}
+        autoHideDuration={4000}
+        onClose={() => setErro('')}
+      >
+        <Alert
+          severity="error"
+          onClose={() => setErro('')}
+        >
+          {erro}
+        </Alert>
+      </Snackbar>
     </>
   )
 }
