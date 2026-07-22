@@ -183,7 +183,10 @@ function MainLayout() {
             </List>
           </Collapse>
 
-          <ListItemButton>
+          <ListItemButton
+            selected={location.pathname === '/compras'}
+            onClick={() => navigate('/compras')}
+          >
             <ListItemIcon sx={{ color: '#fff' }}>
               <LocalShippingIcon />
             </ListItemIcon>

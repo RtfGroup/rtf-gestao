@@ -13,6 +13,7 @@ import MainLayout from './layouts/MainLayout'
 import Dashboard from './pages/Dashboard'
 import Produtos from './pages/Produtos'
 import Categorias from './pages/Categorias'
+import Compras from './pages/Compras'
 import Login from './pages/Login'
 
 function RotaProtegida() {
@@ -65,6 +66,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/produtos" element={<Produtos />} />
             <Route path="/categorias" element={<Categorias />} />
+            <Route path="/compras" element={<Compras />} />
           </Route>
         </Route>
 
