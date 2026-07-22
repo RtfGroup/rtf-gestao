@@ -6,6 +6,10 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   TextField,
 } from '@mui/material'
 
@@ -14,6 +18,12 @@ import {
   atualizarProduto,
   criarProduto,
 } from '../../services/produtos'
+import { listarCategorias } from '../../services/categorias'
+
+type Categoria = {
+  id: string
+  nome: string
+}
 
 type ModalProdutoProps = {
   aberto: boolean
@@ -30,24 +40,43 @@ function ModalProduto({
 }: ModalProdutoProps) {
   const [nome, setNome] = useState('')
   const [descricao, setDescricao] = useState('')
+  const [categoriaId, setCategoriaId] = useState('')
+  const [categorias, setCategorias] = useState<Categoria[]>([])
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+
+  useEffect(() => {
+    if (aberto) {
+      carregarCategorias()
+    }
+  }, [aberto])
 
   useEffect(() => {
     if (produto) {
       setNome(produto.nome ?? '')
       setDescricao(produto.descricao ?? '')
+      setCategoriaId(produto.categoria_id ?? '')
     } else {
-      setNome('')
-      setDescricao('')
+      limparFormulario()
     }
 
     setErro('')
   }, [produto, aberto])
 
+  async function carregarCategorias() {
+    try {
+      const dados = await listarCategorias()
+      setCategorias(dados ?? [])
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error)
+      setErro('Não foi possível carregar as categorias.')
+    }
+  }
+
   function limparFormulario() {
     setNome('')
     setDescricao('')
+    setCategoriaId('')
     setErro('')
   }
 
@@ -62,20 +91,25 @@ function ModalProduto({
       return
     }
 
+    if (!categoriaId) {
+      setErro('Selecione uma categoria.')
+      return
+    }
+
     try {
       setSalvando(true)
       setErro('')
 
+      const dadosProduto = {
+        nome: nome.trim(),
+        descricao: descricao.trim(),
+        categoria_id: categoriaId,
+      }
+
       if (produto?.id) {
-        await atualizarProduto(produto.id, {
-          nome: nome.trim(),
-          descricao: descricao.trim(),
-        })
+        await atualizarProduto(produto.id, dadosProduto)
       } else {
-        await criarProduto({
-          nome: nome.trim(),
-          descricao: descricao.trim(),
-        })
+        await criarProduto(dadosProduto)
       }
 
       limparFormulario()
@@ -120,6 +154,25 @@ function ModalProduto({
           margin="normal"
           required
         />
+
+        <FormControl fullWidth margin="normal" required>
+          <InputLabel>Categoria</InputLabel>
+
+          <Select
+            value={categoriaId}
+            label="Categoria"
+            onChange={(evento) => setCategoriaId(evento.target.value)}
+          >
+            {categorias.map((categoria) => (
+              <MenuItem
+                key={categoria.id}
+                value={categoria.id}
+              >
+                {categoria.nome}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
         <TextField
           label="Descrição"

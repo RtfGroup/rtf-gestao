@@ -18,6 +18,7 @@ export type Produto = {
   codigo?: string
   nome?: string
   descricao?: string
+  categoria_id?: string
   categoria?: string
   estoque?: number
   preco_venda?: number

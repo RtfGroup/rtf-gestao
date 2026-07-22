@@ -3,19 +3,28 @@ import { supabase } from '../lib/supabase'
 export type NovoProduto = {
   nome: string
   descricao: string
+  categoria_id: string
 }
 
 export async function listarProdutos() {
   const { data, error } = await supabase
     .from('produtos')
-    .select('*')
+    .select(`
+      *,
+      categorias (
+        nome
+      )
+    `)
     .order('nome')
 
   if (error) {
     throw error
   }
 
-  return data
+  return (data ?? []).map((produto) => ({
+    ...produto,
+    categoria: produto.categorias?.nome ?? null,
+  }))
 }
 
 export async function criarProduto(produto: NovoProduto) {
@@ -48,6 +57,7 @@ export async function criarProduto(produto: NovoProduto) {
       empresa_id: usuario.empresa_id,
       nome: produto.nome,
       descricao: produto.descricao || null,
+      categoria_id: produto.categoria_id,
     })
     .select()
     .single()
@@ -68,6 +78,7 @@ export async function atualizarProduto(
     .update({
       nome: produto.nome,
       descricao: produto.descricao || null,
+      categoria_id: produto.categoria_id,
     })
     .eq('id', produtoId)
     .select()
