@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import {
   Alert,
@@ -37,6 +38,8 @@ interface Compra {
 }
 
 export default function Compras() {
+  const navigate = useNavigate()
+
   const [compras, setCompras] = useState<Compra[]>([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
@@ -124,9 +127,7 @@ export default function Compras() {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => {
-            console.log('Abrir cadastro de nova compra')
-          }}
+          onClick={() => navigate('/compras/nova')}
         >
           Nova compra
         </Button>

@@ -10,10 +10,12 @@ import {
 import { supabase } from './lib/supabase'
 
 import MainLayout from './layouts/MainLayout'
+
 import Dashboard from './pages/Dashboard'
 import Produtos from './pages/Produtos'
 import Categorias from './pages/Categorias'
 import Compras from './pages/Compras'
+import NovaCompra from './pages/NovaCompra'
 import Login from './pages/Login'
 
 function RotaProtegida() {
@@ -67,6 +69,7 @@ function App() {
             <Route path="/produtos" element={<Produtos />} />
             <Route path="/categorias" element={<Categorias />} />
             <Route path="/compras" element={<Compras />} />
+            <Route path="/compras/nova" element={<NovaCompra />} />
           </Route>
         </Route>
 
