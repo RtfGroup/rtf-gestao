@@ -19,11 +19,13 @@ import {
 
 import AddIcon from '@mui/icons-material/Add'
 
+import { supabase } from '../lib/supabase'
 import { comprasService } from '../services/compras'
 
 interface Fornecedor {
   id: string
-  nome: string
+  nome_fantasia?: string | null
+  razao_social?: string | null
 }
 
 interface Compra {
@@ -34,7 +36,7 @@ interface Compra {
   valor_total?: number | null
   status?: string | null
   observacoes?: string | null
-  fornecedores?: Fornecedor[] | null
+  fornecedores?: Fornecedor | Fornecedor[] | null
 }
 
 export default function Compras() {
@@ -48,28 +50,76 @@ export default function Compras() {
     carregarCompras()
   }, [])
 
+  async function obterEmpresaId() {
+    const {
+      data: { user },
+      error: erroUsuario,
+    } = await supabase.auth.getUser()
+
+    if (erroUsuario || !user) {
+      throw new Error('Usuário não autenticado.')
+    }
+
+    const { data: usuario, error: erroPerfil } = await supabase
+      .from('usuarios')
+      .select('empresa_id')
+      .eq('id', user.id)
+      .single()
+
+    if (erroPerfil) {
+      throw new Error(erroPerfil.message)
+    }
+
+    if (!usuario?.empresa_id) {
+      throw new Error('Usuário sem empresa vinculada.')
+    }
+
+    return usuario.empresa_id
+  }
+
   async function carregarCompras() {
     try {
       setCarregando(true)
       setErro('')
 
-      const empresaId = localStorage.getItem('empresa_id')
-
-      if (!empresaId) {
-        setCompras([])
-        setErro('O ID da empresa ainda não está configurado no sistema.')
-        return
-      }
+      const empresaId = await obterEmpresaId()
 
       const dados = await comprasService.listarCompras(empresaId)
 
       setCompras((dados ?? []) as Compra[])
     } catch (error) {
-      console.error(error)
-      setErro('Não foi possível carregar as compras.')
+      console.error('Erro ao carregar compras:', error)
+
+      setErro(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível carregar as compras.',
+      )
     } finally {
       setCarregando(false)
     }
+  }
+
+  function obterNomeFornecedor(compra: Compra) {
+    const relacionamento = compra.fornecedores
+
+    if (!relacionamento) {
+      return 'Não informado'
+    }
+
+    const fornecedor = Array.isArray(relacionamento)
+      ? relacionamento[0]
+      : relacionamento
+
+    if (!fornecedor) {
+      return 'Não informado'
+    }
+
+    return (
+      fornecedor.nome_fantasia ||
+      fornecedor.razao_social ||
+      'Não informado'
+    )
   }
 
   function formatarMoeda(valor?: number | null) {
@@ -134,7 +184,7 @@ export default function Compras() {
       </Box>
 
       {erro && (
-        <Alert severity="warning" sx={{ mb: 3 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
           {erro}
         </Alert>
       )}
@@ -178,7 +228,7 @@ export default function Compras() {
               compras.map((compra) => (
                 <TableRow key={compra.id} hover>
                   <TableCell>
-                    {compra.fornecedores?.[0]?.nome ?? 'Não informado'}
+                    {obterNomeFornecedor(compra)}
                   </TableCell>
 
                   <TableCell>

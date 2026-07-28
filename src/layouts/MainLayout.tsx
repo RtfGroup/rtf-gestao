@@ -133,7 +133,11 @@ function MainLayout() {
                 <ListItemText primary="Clientes" />
               </ListItemButton>
 
-              <ListItemButton sx={{ pl: 4 }}>
+              <ListItemButton
+                sx={{ pl: 4 }}
+                selected={location.pathname === '/fornecedores'}
+                onClick={() => navigate('/fornecedores')}
+              >
                 <ListItemIcon sx={{ color: '#fff' }}>
                   <LocalShippingIcon />
                 </ListItemIcon>
@@ -173,7 +177,11 @@ function MainLayout() {
                 <ListItemText primary="Movimentações" />
               </ListItemButton>
 
-              <ListItemButton sx={{ pl: 4 }}>
+              <ListItemButton
+                sx={{ pl: 4 }}
+                selected={location.pathname === '/inventario'}
+                onClick={() => navigate('/inventario')}
+              >
                 <ListItemIcon sx={{ color: '#fff' }}>
                   <WarehouseIcon />
                 </ListItemIcon>
@@ -184,7 +192,7 @@ function MainLayout() {
           </Collapse>
 
           <ListItemButton
-            selected={location.pathname === '/compras'}
+            selected={location.pathname.startsWith('/compras')}
             onClick={() => navigate('/compras')}
           >
             <ListItemIcon sx={{ color: '#fff' }}>
@@ -194,7 +202,10 @@ function MainLayout() {
             <ListItemText primary="Compras" />
           </ListItemButton>
 
-          <ListItemButton>
+          <ListItemButton
+            selected={location.pathname.startsWith('/vendas')}
+            onClick={() => navigate('/vendas')}
+          >
             <ListItemIcon sx={{ color: '#fff' }}>
               <ShoppingCartIcon />
             </ListItemIcon>

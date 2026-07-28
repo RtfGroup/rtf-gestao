@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import {
+  Alert,
   Box,
   Button,
+  CircularProgress,
   Divider,
   IconButton,
   MenuItem,
@@ -17,8 +19,11 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveIcon from '@mui/icons-material/Save'
 
+import { supabase } from '../lib/supabase'
+
 import {
   cadastrosCompraService,
+  comprasService,
   type FornecedorCompra,
   type ProdutoCompra,
 } from '../services/compras'
@@ -44,6 +49,9 @@ export default function NovaCompra() {
   const [numeroNota, setNumeroNota] = useState('')
   const [observacoes, setObservacoes] = useState('')
 
+  const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState('')
+
   const [itens, setItens] = useState<ItemCompra[]>([
     {
       id: Date.now(),
@@ -66,15 +74,37 @@ export default function NovaCompra() {
 
       setFornecedores(listaFornecedores)
       setProdutos(listaProdutos)
-
-      console.log('FORNECEDORES:', listaFornecedores)
-      console.log('PRODUTOS:', listaProdutos)
     } catch (error) {
-      console.error(
-        'Erro ao carregar fornecedores e produtos:',
-        error,
-      )
+      console.error(error)
+      setErro('Não foi possível carregar fornecedores e produtos.')
     }
+  }
+
+  async function obterEmpresaId() {
+    const {
+      data: { user },
+      error: erroUsuario,
+    } = await supabase.auth.getUser()
+
+    if (erroUsuario || !user) {
+      throw new Error('Usuário não autenticado.')
+    }
+
+    const { data: usuario, error: erroPerfil } = await supabase
+      .from('usuarios')
+      .select('empresa_id')
+      .eq('id', user.id)
+      .single()
+
+    if (erroPerfil) {
+      throw new Error(erroPerfil.message)
+    }
+
+    if (!usuario?.empresa_id) {
+      throw new Error('Usuário sem empresa vinculada.')
+    }
+
+    return usuario.empresa_id
   }
 
   function adicionarItem() {
@@ -116,6 +146,25 @@ export default function NovaCompra() {
     )
   }
 
+  function selecionarProduto(id: number, produtoId: string) {
+    const produtoSelecionado = produtos.find(
+      (produto) => produto.id === produtoId,
+    )
+
+    setItens((itensAtuais) =>
+      itensAtuais.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              produto: produtoId,
+              valorUnitario:
+                produtoSelecionado?.preco_custo ?? item.valorUnitario,
+            }
+          : item,
+      ),
+    )
+  }
+
   function calcularSubtotal(item: ItemCompra) {
     return item.quantidade * item.valorUnitario
   }
@@ -132,6 +181,67 @@ export default function NovaCompra() {
       style: 'currency',
       currency: 'BRL',
     }).format(valor)
+  }
+
+  async function salvarCompra() {
+    try {
+      setErro('')
+
+      if (!fornecedor) {
+        setErro('Selecione um fornecedor.')
+        return
+      }
+
+      if (!dataCompra) {
+        setErro('Informe a data da compra.')
+        return
+      }
+
+      const itemInvalido = itens.some(
+        (item) =>
+          !item.produto ||
+          item.quantidade <= 0 ||
+          item.valorUnitario < 0,
+      )
+
+      if (itemInvalido) {
+        setErro(
+          'Confira os produtos, quantidades e valores da compra.',
+        )
+        return
+      }
+
+      setSalvando(true)
+
+      const empresaId = await obterEmpresaId()
+
+      await comprasService.registrarCompra({
+        empresa_id: empresaId,
+        fornecedor_id: fornecedor,
+        numero_compra: numeroCompra || undefined,
+        numero_nota: numeroNota || undefined,
+        data_compra: dataCompra,
+        gera_contas_pagar: true,
+        observacoes: observacoes || undefined,
+        itens: itens.map((item) => ({
+          produto_id: item.produto,
+          quantidade: item.quantidade,
+          valor_unitario: item.valorUnitario,
+        })),
+      })
+
+      navigate('/compras')
+    } catch (error) {
+      console.error('Erro ao registrar compra:', error)
+
+      setErro(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível registrar a compra.',
+      )
+    } finally {
+      setSalvando(false)
+    }
   }
 
   return (
@@ -161,6 +271,12 @@ export default function NovaCompra() {
           Voltar
         </Button>
       </Box>
+
+      {erro && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {erro}
+        </Alert>
+      )}
 
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
@@ -287,11 +403,7 @@ export default function NovaCompra() {
               size="small"
               value={item.produto}
               onChange={(event) =>
-                atualizarItem(
-                  item.id,
-                  'produto',
-                  event.target.value,
-                )
+                selecionarProduto(item.id, event.target.value)
               }
             >
               <MenuItem value="">
@@ -397,6 +509,7 @@ export default function NovaCompra() {
       >
         <Button
           variant="outlined"
+          disabled={salvando}
           onClick={() => navigate('/compras')}
         >
           Cancelar
@@ -404,20 +517,17 @@ export default function NovaCompra() {
 
         <Button
           variant="contained"
-          startIcon={<SaveIcon />}
-          onClick={() => {
-            console.log({
-              fornecedor,
-              dataCompra,
-              numeroCompra,
-              numeroNota,
-              observacoes,
-              itens,
-              total: calcularTotal(),
-            })
-          }}
+          startIcon={
+            salvando ? (
+              <CircularProgress size={18} color="inherit" />
+            ) : (
+              <SaveIcon />
+            )
+          }
+          disabled={salvando}
+          onClick={salvarCompra}
         >
-          Salvar compra
+          {salvando ? 'Salvando...' : 'Salvar compra'}
         </Button>
       </Box>
     </Box>

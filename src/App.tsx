@@ -16,7 +16,12 @@ import Produtos from './pages/Produtos'
 import Categorias from './pages/Categorias'
 import Compras from './pages/Compras'
 import NovaCompra from './pages/NovaCompra'
+import Fornecedores from './pages/Fornecedores'
 import Login from './pages/Login'
+import Inventario from './pages/Inventario'
+import NovaVenda from './pages/NovaVenda'
+import Vendas from './pages/Vendas'
+
 
 function RotaProtegida() {
   const [carregando, setCarregando] = useState(true)
@@ -64,13 +69,17 @@ function App() {
         <Route path="/login" element={<Login />} />
 
         <Route element={<RotaProtegida />}>
-          <Route element={<MainLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/produtos" element={<Produtos />} />
-            <Route path="/categorias" element={<Categorias />} />
-            <Route path="/compras" element={<Compras />} />
-            <Route path="/compras/nova" element={<NovaCompra />} />
-          </Route>
+<Route element={<MainLayout />}>
+  <Route path="/dashboard" element={<Dashboard />} />
+  <Route path="/produtos" element={<Produtos />} />
+  <Route path="/categorias" element={<Categorias />} />
+  <Route path="/fornecedores" element={<Fornecedores />} />
+  <Route path="/compras" element={<Compras />} />
+  <Route path="/compras/nova" element={<NovaCompra />} />
+  <Route path="/inventario" element={<Inventario />} />
+  <Route path="/vendas/nova" element={<NovaVenda />} />
+  <Route path="/vendas" element={<Vendas />} />
+</Route>
         </Route>
 
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
