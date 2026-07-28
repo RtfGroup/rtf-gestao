@@ -35,30 +35,7 @@ export default function NovaCompra() {
 
   const [fornecedores, setFornecedores] = useState<FornecedorCompra[]>([])
   const [produtos, setProdutos] = useState<ProdutoCompra[]>([])
-useEffect(() => {
-  carregarCadastros()
-}, [])
 
-async function carregarCadastros() {
-  try {
-    const empresaId = localStorage.getItem('empresa_id')
-
-    if (!empresaId) {
-      console.error('empresa_id não encontrado')
-      return
-    }
-
-    const [listaFornecedores, listaProdutos] = await Promise.all([
-      cadastrosCompraService.listarFornecedores(empresaId),
-cadastrosCompraService.listarProdutos(),
-    ])
-
-    setFornecedores(listaFornecedores)
-    setProdutos(listaProdutos)
-  } catch (error) {
-    console.error('Erro ao carregar fornecedores e produtos:', error)
-  }
-}
   const [fornecedor, setFornecedor] = useState('')
   const [dataCompra, setDataCompra] = useState(
     new Date().toISOString().split('T')[0],
@@ -75,6 +52,30 @@ cadastrosCompraService.listarProdutos(),
       valorUnitario: 0,
     },
   ])
+
+  useEffect(() => {
+    carregarCadastros()
+  }, [])
+
+  async function carregarCadastros() {
+    try {
+      const [listaFornecedores, listaProdutos] = await Promise.all([
+        cadastrosCompraService.listarFornecedores(),
+        cadastrosCompraService.listarProdutos(),
+      ])
+
+      setFornecedores(listaFornecedores)
+      setProdutos(listaProdutos)
+
+      console.log('FORNECEDORES:', listaFornecedores)
+      console.log('PRODUTOS:', listaProdutos)
+    } catch (error) {
+      console.error(
+        'Erro ao carregar fornecedores e produtos:',
+        error,
+      )
+    }
+  }
 
   function adicionarItem() {
     setItens((itensAtuais) => [
@@ -183,15 +184,15 @@ cadastrosCompraService.listarProdutos(),
             onChange={(event) => setFornecedor(event.target.value)}
             fullWidth
           >
-<MenuItem value="">
-  Selecione um fornecedor
-</MenuItem>
+            <MenuItem value="">
+              Selecione um fornecedor
+            </MenuItem>
 
-{fornecedores.map((item) => (
-  <MenuItem key={item.id} value={item.id}>
-    {item.nome}
-  </MenuItem>
-))}
+            {fornecedores.map((item) => (
+              <MenuItem key={item.id} value={item.id}>
+                {item.nome}
+              </MenuItem>
+            ))}
           </TextField>
 
           <TextField
@@ -293,15 +294,15 @@ cadastrosCompraService.listarProdutos(),
                 )
               }
             >
-<MenuItem value="">
-  Selecione
-</MenuItem>
+              <MenuItem value="">
+                Selecione
+              </MenuItem>
 
-{produtos.map((produto) => (
-  <MenuItem key={produto.id} value={produto.id}>
-    {produto.nome}
-  </MenuItem>
-))}
+              {produtos.map((produto) => (
+                <MenuItem key={produto.id} value={produto.id}>
+                  {produto.nome}
+                </MenuItem>
+              ))}
             </TextField>
 
             <TextField
