@@ -30,6 +30,8 @@ import {
   useNavigate,
 } from 'react-router-dom'
 
+import NotificationBell from '../components/layout/NotificationBell'
+
 const larguraMenu = 240
 
 function MainLayout() {
@@ -40,7 +42,7 @@ function MainLayout() {
   const [estoqueAberto, setEstoqueAberto] = useState(true)
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Drawer
         variant="permanent"
         sx={{
@@ -213,7 +215,10 @@ function MainLayout() {
             <ListItemText primary="Vendas" />
           </ListItemButton>
 
-          <ListItemButton>
+          <ListItemButton
+            selected={location.pathname.startsWith('/financeiro')}
+            onClick={() => navigate('/financeiro/contas-receber')}
+          >
             <ListItemIcon sx={{ color: '#fff' }}>
               <AccountBalanceWalletIcon />
             </ListItemIcon>
@@ -223,8 +228,42 @@ function MainLayout() {
         </List>
       </Drawer>
 
-      <Box component="main" sx={{ flexGrow: 1, p: 4 }}>
-        <Outlet />
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          minHeight: '100vh',
+          backgroundColor: '#f8fafc',
+        }}
+      >
+        <Box
+          sx={{
+            height: 70,
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            px: 3,
+            borderBottom: '1px solid #e5e7eb',
+            backgroundColor: '#fff',
+            position: 'sticky',
+            top: 0,
+            zIndex: 10,
+          }}
+        >
+          <NotificationBell />
+        </Box>
+
+        <Box
+          sx={{
+            flex: 1,
+            p: 4,
+          }}
+        >
+          <Outlet />
+        </Box>
       </Box>
     </Box>
   )

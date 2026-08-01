@@ -20,6 +20,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveIcon from '@mui/icons-material/Save'
 
 import { supabase } from '../lib/supabase'
+import { executarAutomacao } from '../engine'
 
 import vendasService, {
   type Cliente,
@@ -318,7 +319,7 @@ export default function NovaVenda() {
 
       setSalvando(true)
 
-      await vendasService.registrarVenda({
+const venda = await vendasService.registrarVenda({
         empresa_id: empresaId,
         usuario_id: usuarioId,
         cliente_id:
@@ -339,7 +340,14 @@ export default function NovaVenda() {
           desconto: item.desconto,
         })),
       })
-
+await executarAutomacao({
+  empresaId,
+  evento: 'VENDA_CRIADA',
+  origem: 'ERP',
+  referenciaId: venda?.id,
+  dados: venda,
+})
+console.log('RTF ENGINE EXECUTADO')
       navigate('/vendas')
     } catch (error) {
       console.error('Erro ao registrar venda:', error)

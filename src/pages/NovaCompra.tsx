@@ -20,6 +20,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveIcon from '@mui/icons-material/Save'
 
 import { supabase } from '../lib/supabase'
+import { executarAutomacao } from '../engine'
 
 import {
   cadastrosCompraService,
@@ -215,7 +216,7 @@ export default function NovaCompra() {
 
       const empresaId = await obterEmpresaId()
 
-      await comprasService.registrarCompra({
+const compra = await comprasService.registrarCompra({
         empresa_id: empresaId,
         fornecedor_id: fornecedor,
         numero_compra: numeroCompra || undefined,
@@ -229,7 +230,20 @@ export default function NovaCompra() {
           valor_unitario: item.valorUnitario,
         })),
       })
-
+      console.log('ANTES DO ENGINE')
+await executarAutomacao({
+  empresaId,
+  evento: 'COMPRA_CRIADA',
+  origem: 'ERP',
+referenciaId: compra,
+dados: {
+  compraId: compra,
+  fornecedorId: fornecedor,
+  valorTotal: calcularTotal(),
+},
+})
+console.log('DEPOIS DO ENGINE')
+console.log('RTF ENGINE COMPRA EXECUTADO')
       navigate('/compras')
     } catch (error) {
       console.error('Erro ao registrar compra:', error)

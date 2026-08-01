@@ -21,7 +21,7 @@ import Login from './pages/Login'
 import Inventario from './pages/Inventario'
 import NovaVenda from './pages/NovaVenda'
 import Vendas from './pages/Vendas'
-
+import ContasReceber from './pages/ContasReceber'
 
 function RotaProtegida() {
   const [carregando, setCarregando] = useState(true)
@@ -79,6 +79,7 @@ function App() {
   <Route path="/inventario" element={<Inventario />} />
   <Route path="/vendas/nova" element={<NovaVenda />} />
   <Route path="/vendas" element={<Vendas />} />
+  <Route path="/financeiro/contas-receber" element={<ContasReceber />} />
 </Route>
         </Route>
 
