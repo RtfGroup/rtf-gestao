@@ -7,6 +7,7 @@ import {
   Button,
   Chip,
   CircularProgress,
+  IconButton,
   Paper,
   Table,
   TableBody,
@@ -18,6 +19,8 @@ import {
 } from '@mui/material'
 
 import AddIcon from '@mui/icons-material/Add'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import DeleteIcon from '@mui/icons-material/Delete'
 
 import { supabase } from '../lib/supabase'
 import { comprasService } from '../services/compras'
@@ -47,7 +50,7 @@ export default function Compras() {
   const [erro, setErro] = useState('')
 
   useEffect(() => {
-    carregarCompras()
+    void carregarCompras()
   }, [])
 
   async function obterEmpresaId() {
@@ -83,7 +86,6 @@ export default function Compras() {
       setErro('')
 
       const empresaId = await obterEmpresaId()
-
       const dados = await comprasService.listarCompras(empresaId)
 
       setCompras((dados ?? []) as Compra[])
@@ -97,6 +99,42 @@ export default function Compras() {
       )
     } finally {
       setCarregando(false)
+    }
+  }
+
+  function formatarMoeda(valor?: number | null) {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(valor ?? 0)
+  }
+
+function visualizarCompra(compra: Compra) {
+  navigate(`/compras/${compra.id}`)
+}
+
+  async function excluirCompra(compra: Compra) {
+    const confirmou = window.confirm(
+      'Deseja realmente excluir esta compra?',
+    )
+
+    if (!confirmou) {
+      return
+    }
+
+try {
+  await comprasService.excluirCompra(compra.id)
+  await carregarCompras()
+
+  alert('Compra excluída com sucesso.')
+}catch (error) {
+      console.error('Erro ao excluir compra:', error)
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'Erro ao excluir a compra.',
+      )
     }
   }
 
@@ -120,13 +158,6 @@ export default function Compras() {
       fornecedor.razao_social ||
       'Não informado'
     )
-  }
-
-  function formatarMoeda(valor?: number | null) {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(valor ?? 0)
   }
 
   function formatarData(data?: string | null) {
@@ -193,34 +224,46 @@ export default function Compras() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>
-                <strong>Fornecedor</strong>
-              </TableCell>
+  <TableCell>
+    <strong>Nº Compra</strong>
+  </TableCell>
 
-              <TableCell>
-                <strong>Data</strong>
-              </TableCell>
+  <TableCell>
+    <strong>Fornecedor</strong>
+  </TableCell>
 
-              <TableCell align="right">
-                <strong>Total</strong>
-              </TableCell>
+  <TableCell>
+    <strong>Nota Fiscal</strong>
+  </TableCell>
 
-              <TableCell align="center">
-                <strong>Status</strong>
-              </TableCell>
-            </TableRow>
+  <TableCell>
+    <strong>Data</strong>
+  </TableCell>
+
+  <TableCell align="right">
+    <strong>Total</strong>
+  </TableCell>
+
+  <TableCell align="center">
+    <strong>Status</strong>
+  </TableCell>
+
+  <TableCell align="center">
+    <strong>Ações</strong>
+  </TableCell>
+</TableRow>
           </TableHead>
 
           <TableBody>
             {carregando ? (
               <TableRow>
-                <TableCell colSpan={4} align="center">
+                <TableCell colSpan={7} align="center">
                   <CircularProgress size={30} />
                 </TableCell>
               </TableRow>
             ) : compras.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} align="center">
+                <TableCell colSpan={7} align="center">
                   Nenhuma compra cadastrada.
                 </TableCell>
               </TableRow>
@@ -228,8 +271,14 @@ export default function Compras() {
               compras.map((compra) => (
                 <TableRow key={compra.id} hover>
                   <TableCell>
+  {compra.numero_compra ?? '-'}
+</TableCell>
+                  <TableCell>
                     {obterNomeFornecedor(compra)}
                   </TableCell>
+                  <TableCell>
+  {compra.numero_nota ?? '-'}
+</TableCell>
 
                   <TableCell>
                     {formatarData(compra.data_compra)}
@@ -245,6 +294,22 @@ export default function Compras() {
                       color={definirCorStatus(compra.status)}
                       size="small"
                     />
+                  </TableCell>
+
+                  <TableCell align="center">
+                    <IconButton
+                      color="primary"
+                      onClick={() => visualizarCompra(compra)}
+                    >
+                      <VisibilityIcon />
+                    </IconButton>
+
+                    <IconButton
+                      color="error"
+                      onClick={() => void excluirCompra(compra)}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))

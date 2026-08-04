@@ -15,13 +15,27 @@ import {
 
 export type Produto = {
   id?: string
-  codigo?: string
+  empresa_id?: string
+  categoria_id?: string
+
   nome?: string
   descricao?: string
-  categoria_id?: string
-  categoria?: string
-  estoque?: number
+  codigo?: string
+  codigo_barras?: string
+
+  tipo?: string
+  unidade_medida?: string
+
+  preco_custo?: number
   preco_venda?: number
+
+  controla_estoque?: boolean
+  estoque?: number
+  estoque_minimo?: number
+  estoque_maximo?: number | null
+
+  ativo?: boolean
+  categoria?: string
 }
 
 type TabelaProdutosProps = {

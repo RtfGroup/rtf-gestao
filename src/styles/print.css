@@ -1,0 +1,41 @@
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+
+  aside,
+  nav,
+  header,
+  button {
+    display: none !important;
+  }
+
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .MuiBox-root {
+    max-width: 100% !important;
+  }
+
+  .MuiPaper-root {
+    box-shadow: none !important;
+    border: 1px solid #dddddd !important;
+    break-inside: avoid;
+  }
+
+  table {
+    font-size: 11px !important;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+}

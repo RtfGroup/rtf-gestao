@@ -127,13 +127,17 @@ function MainLayout() {
                 <ListItemText primary="Categorias" />
               </ListItemButton>
 
-              <ListItemButton sx={{ pl: 4 }}>
-                <ListItemIcon sx={{ color: '#fff' }}>
-                  <PeopleIcon />
-                </ListItemIcon>
+<ListItemButton
+  sx={{ pl: 4 }}
+  selected={location.pathname === '/clientes'}
+  onClick={() => navigate('/clientes')}
+>
+  <ListItemIcon sx={{ color: '#fff' }}>
+    <PeopleIcon />
+  </ListItemIcon>
 
-                <ListItemText primary="Clientes" />
-              </ListItemButton>
+  <ListItemText primary="Clientes" />
+</ListItemButton>
 
               <ListItemButton
                 sx={{ pl: 4 }}

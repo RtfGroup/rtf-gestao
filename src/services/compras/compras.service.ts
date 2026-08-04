@@ -56,6 +56,16 @@ class ComprasService {
 
     return data
   }
+
+  async excluirCompra(compraId: string) {
+    const { error } = await supabase.rpc('excluir_compra', {
+      p_compra_id: compraId,
+    })
+
+    if (error) {
+      throw new Error(error.message)
+    }
+  }
 }
 
 export const comprasService = new ComprasService()

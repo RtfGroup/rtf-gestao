@@ -74,6 +74,7 @@ export async function listarFornecedores() {
 export async function criarFornecedor(
   fornecedor: NovoFornecedor,
 ) {
+
   const empresaId = await buscarEmpresaUsuario()
 
   const { data, error } = await supabase
@@ -95,4 +96,40 @@ export async function criarFornecedor(
   }
 
   return data
+}
+export async function atualizarFornecedor(
+  fornecedorId: string,
+  fornecedor: NovoFornecedor,
+) {
+  const { data, error } = await supabase
+    .from('fornecedores')
+    .update({
+      razao_social: fornecedor.razao_social,
+      nome_fantasia: fornecedor.nome_fantasia,
+      cpf_cnpj: fornecedor.cpf_cnpj || null,
+      telefone: fornecedor.telefone || null,
+      email: fornecedor.email || null,
+    })
+    .eq('id', fornecedorId)
+    .select()
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function excluirFornecedor(
+  fornecedorId: string,
+) {
+  const { error } = await supabase
+    .from('fornecedores')
+    .delete()
+    .eq('id', fornecedorId)
+
+  if (error) {
+    throw error
+  }
 }

@@ -99,3 +99,35 @@ export async function excluirCategoria(categoriaId: string) {
     throw error
   }
 }
+
+export async function obterOuCriarCategoriaPadrao() {
+  const empresaId = await buscarEmpresaDoUsuario()
+
+  const { data: categoriaExistente, error: erroBusca } = await supabase
+    .from('categorias')
+    .select('id')
+    .eq('empresa_id', empresaId)
+    .ilike('nome', 'Produtos importados')
+    .maybeSingle()
+
+  if (erroBusca) throw erroBusca
+
+  if (categoriaExistente) {
+    return categoriaExistente.id
+  }
+
+  const { data: novaCategoria, error: erroCriacao } = await supabase
+    .from('categorias')
+    .insert({
+      empresa_id: empresaId,
+      nome: 'Produtos importados',
+      descricao: 'Criada automaticamente pela leitura da nota fiscal',
+      tipo: 'produto',
+    })
+    .select('id')
+    .single()
+
+  if (erroCriacao) throw erroCriacao
+
+  return novaCategoria.id
+}

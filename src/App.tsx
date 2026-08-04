@@ -16,12 +16,15 @@ import Produtos from './pages/Produtos'
 import Categorias from './pages/Categorias'
 import Compras from './pages/Compras'
 import NovaCompra from './pages/NovaCompra'
+import DetalhesCompra from './pages/DetalhesCompra'
 import Fornecedores from './pages/Fornecedores'
 import Login from './pages/Login'
 import Inventario from './pages/Inventario'
+import Clientes from './pages/Clientes'
 import NovaVenda from './pages/NovaVenda'
 import Vendas from './pages/Vendas'
 import ContasReceber from './pages/ContasReceber'
+
 
 function RotaProtegida() {
   const [carregando, setCarregando] = useState(true)
@@ -73,9 +76,11 @@ function App() {
   <Route path="/dashboard" element={<Dashboard />} />
   <Route path="/produtos" element={<Produtos />} />
   <Route path="/categorias" element={<Categorias />} />
+  <Route path="/clientes" element={<Clientes />} />
   <Route path="/fornecedores" element={<Fornecedores />} />
   <Route path="/compras" element={<Compras />} />
   <Route path="/compras/nova" element={<NovaCompra />} />
+  <Route path="/compras/:id" element={<DetalhesCompra />} />
   <Route path="/inventario" element={<Inventario />} />
   <Route path="/vendas/nova" element={<NovaVenda />} />
   <Route path="/vendas" element={<Vendas />} />

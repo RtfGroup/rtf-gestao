@@ -21,9 +21,14 @@ import {
 } from '@mui/material'
 
 import AddIcon from '@mui/icons-material/Add'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
+import IconButton from '@mui/material/IconButton'
 
 import {
+  atualizarFornecedor,
   criarFornecedor,
+  excluirFornecedor,
   listarFornecedores,
   type Fornecedor,
 } from '../services/fornecedores'
@@ -42,6 +47,8 @@ export default function Fornecedores() {
 
   const [mensagem, setMensagem] = useState('')
   const [erro, setErro] = useState('')
+  const [fornecedorEditando, setFornecedorEditando] =
+  useState<Fornecedor | null>(null)
 
   useEffect(() => {
     carregarFornecedores()
@@ -57,14 +64,15 @@ export default function Fornecedores() {
     }
   }
 
-  function abrirNovoFornecedor() {
-    setRazaoSocial('')
-    setNomeFantasia('')
-    setCpfCnpj('')
-    setTelefone('')
-    setEmail('')
-    setModalAberto(true)
-  }
+function abrirNovoFornecedor() {
+  setFornecedorEditando(null)
+  setRazaoSocial('')
+  setNomeFantasia('')
+  setCpfCnpj('')
+  setTelefone('')
+  setEmail('')
+  setModalAberto(true)
+}
 
   function fecharModal() {
     if (!salvando) {
@@ -73,6 +81,7 @@ export default function Fornecedores() {
   }
 
   async function salvarFornecedor() {
+
     try {
       setErro('')
 
@@ -83,18 +92,48 @@ export default function Fornecedores() {
 
       setSalvando(true)
 
-      await criarFornecedor({
-        razao_social: razaoSocial.trim(),
-        nome_fantasia: nomeFantasia.trim(),
-        cpf_cnpj: cpfCnpj.trim(),
-        telefone: telefone.trim(),
-        email: email.trim(),
-      })
+const dadosFornecedor = {
+  razao_social: razaoSocial.trim(),
+  nome_fantasia: nomeFantasia.trim(),
+  cpf_cnpj: cpfCnpj.trim(),
+  telefone: telefone.trim(),
+  email: email.trim(),
+}
+
+if (fornecedorEditando) {
+  await atualizarFornecedor(
+    fornecedorEditando.id,
+    dadosFornecedor,
+  )
+} else {
+  await criarFornecedor(dadosFornecedor)
+}
 
       await carregarFornecedores()
 
-      setModalAberto(false)
-      setMensagem('Fornecedor cadastrado com sucesso.')
+setFornecedorEditando(null)
+
+setRazaoSocial('')
+setNomeFantasia('')
+setCpfCnpj('')
+setTelefone('')
+setEmail('')
+
+setModalAberto(false)
+
+setFornecedorEditando(null)
+
+setRazaoSocial('')
+setNomeFantasia('')
+setCpfCnpj('')
+setTelefone('')
+setEmail('')
+
+setMensagem(
+  fornecedorEditando
+    ? 'Fornecedor atualizado com sucesso.'
+    : 'Fornecedor cadastrado com sucesso.',
+)
     } catch (error) {
       console.error(error)
 
@@ -107,6 +146,32 @@ export default function Fornecedores() {
       setSalvando(false)
     }
   }
+
+async function removerFornecedor(
+  fornecedorId: string,
+) {
+  const confirmou = window.confirm(
+    'Tem certeza que deseja excluir este fornecedor?',
+  )
+
+  if (!confirmou) {
+    return
+  }
+
+  try {
+    await excluirFornecedor(fornecedorId)
+    await carregarFornecedores()
+    setMensagem('Fornecedor excluído com sucesso.')
+  } catch (error) {
+    console.error('Erro ao excluir fornecedor:', error)
+
+    setErro(
+      error instanceof Error
+        ? error.message
+        : 'Não foi possível excluir o fornecedor.',
+    )
+  }
+}
 
   return (
     <Box>
@@ -157,9 +222,13 @@ export default function Fornecedores() {
                 <strong>E-mail</strong>
               </TableCell>
 
-              <TableCell align="center">
-                <strong>Status</strong>
-              </TableCell>
+<TableCell align="center">
+  <strong>Status</strong>
+</TableCell>
+
+<TableCell align="center">
+  <strong>Ações</strong>
+</TableCell>
             </TableRow>
           </TableHead>
 
@@ -191,9 +260,35 @@ export default function Fornecedores() {
                     {fornecedor.email || '-'}
                   </TableCell>
 
-                  <TableCell align="center">
-                    {fornecedor.ativo ? 'Ativo' : 'Inativo'}
-                  </TableCell>
+<TableCell align="center">
+  {fornecedor.ativo ? 'Ativo' : 'Inativo'}
+</TableCell>
+
+<TableCell align="center">
+  <IconButton
+    color="primary"
+    onClick={() => {
+      setFornecedorEditando(fornecedor)
+      setRazaoSocial(fornecedor.razao_social ?? '')
+      setNomeFantasia(fornecedor.nome_fantasia ?? '')
+      setCpfCnpj(fornecedor.cpf_cnpj ?? '')
+      setTelefone(fornecedor.telefone ?? '')
+      setEmail(fornecedor.email ?? '')
+      setModalAberto(true)
+    }}
+  >
+    <EditIcon />
+  </IconButton>
+
+<IconButton
+  color="error"
+  onClick={() =>
+    void removerFornecedor(fornecedor.id)
+  }
+>
+  <DeleteIcon />
+</IconButton>
+</TableCell>
                 </TableRow>
               ))
             )}
@@ -207,7 +302,11 @@ export default function Fornecedores() {
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle>Novo Fornecedor</DialogTitle>
+<DialogTitle>
+  {fornecedorEditando
+    ? 'Editar Fornecedor'
+    : 'Novo Fornecedor'}
+</DialogTitle>
 
         <DialogContent>
           <Box

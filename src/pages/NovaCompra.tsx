@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import {
@@ -18,6 +18,7 @@ import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveIcon from '@mui/icons-material/Save'
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
 
 import { supabase } from '../lib/supabase'
 import { executarAutomacao } from '../engine'
@@ -28,6 +29,7 @@ import {
   type FornecedorCompra,
   type ProdutoCompra,
 } from '../services/compras'
+import { criarProduto } from '../services/produtos'
 
 interface ItemCompra {
   id: number
@@ -52,6 +54,8 @@ export default function NovaCompra() {
 
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+  const [lendoNota, setLendoNota] = useState(false)
+const inputNotaRef = useRef<HTMLInputElement | null>(null)
 
   const [itens, setItens] = useState<ItemCompra[]>([
     {
@@ -62,9 +66,9 @@ export default function NovaCompra() {
     },
   ])
 
-  useEffect(() => {
-    carregarCadastros()
-  }, [])
+useEffect(() => {
+  carregarCadastros()
+}, [])
 
   async function carregarCadastros() {
     try {
@@ -184,6 +188,173 @@ export default function NovaCompra() {
     }).format(valor)
   }
 
+function normalizarNome(texto: string) {
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+}
+
+async function lerNotaFiscal(arquivo: File) {
+setLendoNota(true)
+
+try {
+  const formData = new FormData()
+  formData.append('imagem', arquivo)
+
+  const resposta = await fetch(
+    'https://gewzswpatgkcfbhhysfo.supabase.co/functions/v1/ler-nota-fiscal',
+    {
+      method: 'POST',
+      body: formData,
+    },
+  )
+
+  const dados = await resposta.json()
+
+console.log(JSON.stringify(dados, null, 2))
+
+const nota = dados as {
+  fornecedor?: string
+  cnpj?: string
+  data?: string
+  numeroNota?: string
+itens?: Array<{
+  nome?: string
+  quantidade?: number
+  unidade?: string
+  valorUnitario?: number
+}>
+}
+
+if (nota.data) {
+  setDataCompra(nota.data)
+}
+
+if (nota.numeroNota) {
+  setNumeroNota(nota.numeroNota)
+}
+
+const empresaId = await obterEmpresaId()
+
+const { data: numeroGerado, error: erroNumero } = await supabase.rpc(
+  'gerar_numero_compra',
+  {
+    p_empresa_id: empresaId,
+  },
+)
+
+if (erroNumero) {
+  throw erroNumero
+}
+
+if (numeroGerado) {
+  setNumeroCompra(numeroGerado)
+}
+
+if (nota.fornecedor) {
+  const empresaId = await obterEmpresaId()
+  const nomeFornecedor = normalizarNome(nota.fornecedor)
+  const cnpjNota = (nota.cnpj ?? '').replace(/\D/g, '')
+
+  const { data: listaFornecedores, error: erroFornecedores } =
+    await supabase
+      .from('fornecedores')
+      .select('id, razao_social, nome_fantasia, cpf_cnpj')
+      .eq('empresa_id', empresaId)
+
+  if (erroFornecedores) {
+    throw erroFornecedores
+  }
+
+  let fornecedorEncontrado = listaFornecedores?.find((item) => {
+    const razaoSocial = normalizarNome(item.razao_social ?? '')
+    const nomeFantasia = normalizarNome(item.nome_fantasia ?? '')
+    const cnpjCadastrado = (item.cpf_cnpj ?? '').replace(/\D/g, '')
+
+    return (
+      (cnpjNota && cnpjCadastrado === cnpjNota) ||
+      razaoSocial.includes(nomeFornecedor) ||
+      nomeFornecedor.includes(razaoSocial) ||
+      nomeFantasia.includes(nomeFornecedor) ||
+      nomeFornecedor.includes(nomeFantasia)
+    )
+  })
+
+  if (!fornecedorEncontrado) {
+    const { data: novoFornecedor, error: erroCriacao } = await supabase
+      .from('fornecedores')
+      .insert({
+        empresa_id: empresaId,
+        razao_social: nota.fornecedor,
+        nome_fantasia: nota.fornecedor,
+        cpf_cnpj: nota.cnpj || null,
+        ativo: true,
+      })
+      .select('id, razao_social, nome_fantasia, cpf_cnpj')
+      .single()
+
+    if (erroCriacao) {
+      throw erroCriacao
+    }
+
+    fornecedorEncontrado = novoFornecedor
+    await carregarCadastros()
+  }
+
+  setFornecedor(fornecedorEncontrado.id)
+}
+
+if (nota.itens?.length) {
+  const novosItens: ItemCompra[] = []
+
+  for (const [indice, item] of nota.itens.entries()) {
+    let produtoEncontrado = produtos.find(
+      (produto) =>
+        normalizarNome(produto.nome) ===
+        normalizarNome(item.nome ?? ''),
+    )
+
+    if (!produtoEncontrado && item.nome) {
+      const novoProduto = await criarProduto({
+        nome: item.nome,
+        descricao: '',
+        categoria_id: '',
+        codigo: '',
+        codigo_barras: '',
+        tipo: 'produto',
+        unidade_medida: item.unidade ?? 'UN',
+        preco_custo: Number(item.valorUnitario ?? 0),
+        preco_venda: Number(item.valorUnitario ?? 0),
+        controla_estoque: true,
+        estoque_minimo: 0,
+        estoque_maximo: null,
+        ativo: true,
+      })
+
+      produtoEncontrado = novoProduto
+
+      setProdutos((lista) => [...lista, novoProduto])
+    }
+
+    novosItens.push({
+      id: Date.now() + indice,
+      produto: produtoEncontrado?.id ?? '',
+      quantidade: Number(item.quantidade ?? 1),
+      valorUnitario: Number(item.valorUnitario ?? 0),
+    })
+  }
+
+    setItens(novosItens)
+}
+} catch (error) {
+  console.error(error)
+} finally {
+  setLendoNota(false)
+}
+}
+
   async function salvarCompra() {
     try {
       setErro('')
@@ -258,8 +429,8 @@ console.log('RTF ENGINE COMPRA EXECUTADO')
     }
   }
 
-  return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+return (
+  <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
       <Box
         sx={{
           display: 'flex',
@@ -364,13 +535,42 @@ console.log('RTF ENGINE COMPRA EXECUTADO')
             Itens da compra
           </Typography>
 
-          <Button
-            variant="outlined"
-            startIcon={<AddIcon />}
-            onClick={adicionarItem}
-          >
-            Adicionar produto
-          </Button>
+<Box sx={{ display: 'flex', gap: 2 }}>
+<Button
+  component="label"
+  variant="outlined"
+  color="secondary"
+  startIcon={<PhotoCameraIcon />}
+  disabled={lendoNota}
+>
+  {lendoNota ? 'Lendo Nota...' : 'Ler Nota Fiscal'}
+
+  <input
+    type="file"
+    accept="image/*"
+    hidden
+onChange={async (event) => {
+  const arquivo = event.target.files?.[0]
+
+  if (!arquivo) {
+    return
+  }
+
+  await lerNotaFiscal(arquivo)
+
+  event.target.value = ''
+}}
+  />
+</Button>
+
+  <Button
+    variant="outlined"
+    startIcon={<AddIcon />}
+    onClick={adicionarItem}
+  >
+    Adicionar produto
+  </Button>
+</Box>
         </Box>
 
         <Box

@@ -26,6 +26,10 @@ import GraficoFaturamento, {
   type DadoFaturamento,
 } from '../components/dashboard/GraficoFaturamento'
 
+import GraficoFluxoCaixa, {
+  type DadoFluxoCaixa,
+} from '../components/dashboard/GraficoFluxoCaixa'
+
 import ResumoExecutivoCard from '../components/dashboard/ResumoExecutivoCard'
 
 import {
@@ -70,6 +74,9 @@ function Dashboard() {
 
 const [graficoFaturamento, setGraficoFaturamento] =
   useState<DadoFaturamento[]>([])
+
+  const [graficoFluxoCaixa, setGraficoFluxoCaixa] =
+  useState<DadoFluxoCaixa[]>([])
 
   const [carregando, setCarregando] =
     useState(true)
@@ -269,10 +276,10 @@ setRecomendacoes(recomendacoesGeradas)
           .eq('empresa_id', empresaId)
           .neq('status', 'PAGO'),
 
-        supabase
-          .from('fluxo_caixa')
-          .select('tipo, valor')
-          .eq('empresa_id', empresaId),
+supabase
+  .from('fluxo_caixa')
+  .select('*')
+  .eq('empresa_id', empresaId),
 
         supabase
           .from('estoque')
@@ -561,14 +568,126 @@ setRecomendacoes(recomendacoesGeradas)
         {} as Record<string, number>,
       )
 
-      setGraficoFaturamento(
-        Object.entries(faturamentoPorDia).map(
-          ([data, valor]) => ({
-            data,
-            valor,
-          }),
-        ),
-      )
+const dadosFaturamento = Object.entries(faturamentoPorDia)
+  .map(([data, valor]) => {
+    const [dia, mes] = data.split('/').map(Number)
+
+    return {
+      data,
+      valor,
+      ordem: new Date(
+        new Date().getFullYear(),
+        mes - 1,
+        dia,
+      ).getTime(),
+    }
+  })
+  .sort((a, b) => a.ordem - b.ordem)
+  .map(({ data, valor }) => ({
+    data,
+    valor,
+  }))
+
+setGraficoFaturamento(dadosFaturamento)
+
+      const fluxoPorDia = (
+  resultadoFluxo.data ?? []
+).reduce(
+  (acumulador, movimento) => {
+    const dataMovimento =
+      'data_movimento' in movimento
+        ? movimento.data_movimento
+        : null
+
+    if (!dataMovimento) {
+      return acumulador
+    }
+
+    const data = new Date(
+      dataMovimento,
+    ).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+    })
+
+    if (!acumulador[data]) {
+      acumulador[data] = {
+        entradas: 0,
+        saidas: 0,
+      }
+    }
+
+    const valor = Number(
+      movimento.valor ?? 0,
+    )
+
+    const tipo =
+      movimento.tipo?.toLowerCase()
+
+    if (tipo === 'entrada') {
+      acumulador[data].entradas += valor
+    }
+
+    if (
+      tipo === 'saida' ||
+      tipo === 'saída'
+    ) {
+      acumulador[data].saidas += valor
+    }
+
+    return acumulador
+  },
+  {} as Record<
+    string,
+    {
+      entradas: number
+      saidas: number
+    }
+  >,
+)
+
+const dadosFluxoCaixa: DadoFluxoCaixa[] =
+Object.entries(
+  fluxoPorDia as Record<
+    string,
+    {
+      entradas: number
+      saidas: number
+    }
+  >,
+)
+    .map(([data, valores]) => {
+      const [dia, mes] = data
+        .split('/')
+        .map(Number)
+
+      return {
+        data,
+        entradas: valores.entradas,
+        saidas: valores.saidas,
+        ordem: new Date(
+          new Date().getFullYear(),
+          mes - 1,
+          dia,
+        ).getTime(),
+      }
+    })
+    .sort((a, b) => a.ordem - b.ordem)
+    .map(
+      ({
+        data,
+        entradas,
+        saidas,
+      }) => ({
+        data,
+        entradas,
+        saidas,
+      }),
+    )
+
+setGraficoFluxoCaixa(
+  dadosFluxoCaixa,
+)
 
       setResumo({
         vendasHoje,
@@ -745,6 +864,10 @@ setRecomendacoes(recomendacoesGeradas)
       <GraficoFaturamento
         dados={graficoFaturamento}
       />
+
+      <GraficoFluxoCaixa
+  dados={graficoFluxoCaixa}
+/>
 
       <Box sx={{ mt: 4 }}>
         <UltimasVendas
