@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import {
   Alert,
@@ -27,6 +28,7 @@ interface DadosRecebimento {
 }
 
 function ContasReceber() {
+  const navigate = useNavigate()
   const [contas, setContas] = useState<ContaReceber[]>([])
   const [contaSelecionada, setContaSelecionada] =
     useState<ContaReceber | null>(null)
@@ -114,6 +116,14 @@ function ContasReceber() {
   function abrirRecebimento(conta: ContaReceber) {
     setContaSelecionada(conta)
   }
+
+  function visualizarConta(conta: ContaReceber) {
+  navigate(`/financeiro/contas-receber/${conta.id}`)
+}
+
+function editarConta(conta: ContaReceber) {
+  navigate(`/financeiro/contas-receber/${conta.id}/editar`)
+}
 
   function fecharRecebimento() {
     if (salvando) {
@@ -233,11 +243,13 @@ function ContasReceber() {
         quantidade={resumo.quantidade}
       />
 
-      <ContasReceberTabela
-        contas={contas}
-        carregando={carregando}
-        aoReceber={abrirRecebimento}
-      />
+<ContasReceberTabela
+  contas={contas}
+  carregando={carregando}
+  aoReceber={abrirRecebimento}
+  aoVisualizar={visualizarConta}
+  aoEditar={editarConta}
+/>
 
       <ModalRecebimento
         aberto={Boolean(contaSelecionada)}

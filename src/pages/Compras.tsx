@@ -20,6 +20,7 @@ import {
 
 import AddIcon from '@mui/icons-material/Add'
 import VisibilityIcon from '@mui/icons-material/Visibility'
+import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 
 import { supabase } from '../lib/supabase'
@@ -112,7 +113,9 @@ export default function Compras() {
 function visualizarCompra(compra: Compra) {
   navigate(`/compras/${compra.id}`)
 }
-
+function editarCompra(compra: Compra) {
+  navigate(`/compras/${compra.id}/editar`)
+}
   async function excluirCompra(compra: Compra) {
     const confirmou = window.confirm(
       'Deseja realmente excluir esta compra?',
@@ -297,12 +300,19 @@ try {
                   </TableCell>
 
                   <TableCell align="center">
-                    <IconButton
-                      color="primary"
-                      onClick={() => visualizarCompra(compra)}
-                    >
-                      <VisibilityIcon />
-                    </IconButton>
+<IconButton
+  color="primary"
+  onClick={() => visualizarCompra(compra)}
+>
+  <VisibilityIcon />
+</IconButton>
+
+<IconButton
+  color="warning"
+  onClick={() => editarCompra(compra)}
+>
+  <EditIcon />
+</IconButton>
 
                     <IconButton
                       color="error"

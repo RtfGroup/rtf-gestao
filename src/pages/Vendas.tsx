@@ -18,6 +18,10 @@ import {
 } from '@mui/material'
 
 import AddIcon from '@mui/icons-material/Add'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
+import IconButton from '@mui/material/IconButton'
 
 import { supabase } from '../lib/supabase'
 import vendasService from '../services/vendas/vendas.service'
@@ -124,7 +128,6 @@ export default function Vendas() {
     ) {
       return 'success'
     }
-
     if (
       statusNormalizado === 'pendente' ||
       statusNormalizado === 'aberta'
@@ -141,6 +144,53 @@ export default function Vendas() {
 
     return 'default'
   }
+
+      function visualizarVenda(venda: Venda) {
+  navigate(`/vendas/${venda.id}`)
+}
+
+function editarVenda(venda: Venda) {
+  navigate(`/vendas/${venda.id}/editar`)
+}
+async function excluirVenda(venda: Venda) {
+  const confirmou = window.confirm(
+    'Deseja realmente excluir esta venda?',
+  )
+
+  if (!confirmou) {
+    return
+  }
+
+  try {
+    const { error: erroItens } = await supabase
+      .from('itens_venda')
+      .delete()
+      .eq('venda_id', venda.id)
+
+    if (erroItens) {
+      throw erroItens
+    }
+
+    const { error: erroVenda } = await supabase
+      .from('vendas')
+      .delete()
+      .eq('id', venda.id)
+
+    if (erroVenda) {
+      throw erroVenda
+    }
+
+    await carregarVendas()
+  } catch (error) {
+    console.error(JSON.stringify(error, null, 2))
+
+    setErro(
+      error instanceof Error
+        ? error.message
+        : 'Não foi possível excluir a venda.',
+    )
+  }
+}
 
   return (
     <Box>
@@ -196,19 +246,23 @@ export default function Vendas() {
               <TableCell align="center">
                 <strong>Status</strong>
               </TableCell>
+
+              <TableCell align="center">
+  <strong>Ações</strong>
+</TableCell>
             </TableRow>
           </TableHead>
 
           <TableBody>
             {carregando ? (
               <TableRow>
-                <TableCell colSpan={4} align="center">
+                <TableCell colSpan={5} align="center">
                   <CircularProgress size={30} />
                 </TableCell>
               </TableRow>
             ) : vendas.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} align="center">
+                <TableCell colSpan={5} align="center">
                   Nenhuma venda cadastrada.
                 </TableCell>
               </TableRow>
@@ -231,8 +285,29 @@ export default function Vendas() {
   color={obterCorStatus(venda.status)}
   size="small"
 />
-                
                   </TableCell>
+                  <TableCell align="center">
+  <IconButton
+    color="primary"
+    onClick={() => visualizarVenda(venda)}
+  >
+    <VisibilityIcon />
+  </IconButton>
+
+  <IconButton
+    color="warning"
+    onClick={() => editarVenda(venda)}
+  >
+    <EditIcon />
+  </IconButton>
+
+<IconButton
+  color="error"
+  onClick={() => void excluirVenda(venda)}
+>
+  <DeleteIcon />
+</IconButton>
+</TableCell>
                 </TableRow>
               ))
             )}

@@ -1,5 +1,5 @@
 import {
-  Button,
+  Box,
   Chip,
   CircularProgress,
   Paper,
@@ -9,10 +9,14 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Tooltip,
   Typography,
 } from '@mui/material'
 
 import PaymentsIcon from '@mui/icons-material/Payments'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import EditIcon from '@mui/icons-material/Edit'
+import IconButton from '@mui/material/IconButton'
 
 import type { ContaReceber } from '../../services/financeiro'
 
@@ -20,6 +24,8 @@ interface Props {
   contas: ContaReceber[]
   carregando: boolean
   aoReceber: (conta: ContaReceber) => void
+  aoVisualizar: (conta: ContaReceber) => void
+  aoEditar: (conta: ContaReceber) => void
 }
 
 function formatarMoeda(valor?: number | null) {
@@ -61,19 +67,21 @@ export default function ContasReceberTabela({
   contas,
   carregando,
   aoReceber,
+  aoVisualizar,
+  aoEditar,
 }: Props) {
   return (
     <TableContainer component={Paper}>
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>
-              <strong>Cliente</strong>
-            </TableCell>
+            <TableCell sx={{ minWidth: 180 }}>
+  <strong>Cliente</strong>
+</TableCell>
 
-            <TableCell>
-              <strong>Descrição</strong>
-            </TableCell>
+            <TableCell sx={{ minWidth: 140 }}>
+  <strong>Descrição</strong>
+</TableCell>
 
             <TableCell>
               <strong>Vencimento</strong>
@@ -91,13 +99,13 @@ export default function ContasReceberTabela({
               <strong>Saldo</strong>
             </TableCell>
 
-            <TableCell align="center">
-              <strong>Status</strong>
-            </TableCell>
+            <TableCell align="center" sx={{ width: 100 }}>
+  <strong>Status</strong>
+</TableCell>
 
-            <TableCell align="center">
-              <strong>Ações</strong>
-            </TableCell>
+            <TableCell align="center" sx={{ width: 120 }}>
+  <strong>Ações</strong>
+</TableCell>
           </TableRow>
         </TableHead>
 
@@ -165,17 +173,50 @@ export default function ContasReceberTabela({
                     />
                   </TableCell>
 
-                  <TableCell align="center">
-                    <Button
-                      variant="contained"
-                      size="small"
-                      startIcon={<PaymentsIcon />}
-                      disabled={recebida}
-                      onClick={() => aoReceber(conta)}
-                    >
-                      Receber
-                    </Button>
-                  </TableCell>
+                  <TableCell align="center" sx={{ width: 120 }}>
+  <Box
+    sx={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 0.5,
+      whiteSpace: 'nowrap',
+    }}
+  >
+    <Tooltip title="Visualizar">
+      <IconButton
+        size="small"
+        color="primary"
+        onClick={() => aoVisualizar(conta)}
+      >
+        <VisibilityIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
+
+    <Tooltip title="Editar">
+      <IconButton
+        size="small"
+        color="warning"
+        onClick={() => aoEditar(conta)}
+      >
+        <EditIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
+
+    <Tooltip title="Receber">
+      <span>
+        <IconButton
+          size="small"
+          color="success"
+          disabled={recebida}
+          onClick={() => aoReceber(conta)}
+        >
+          <PaymentsIcon fontSize="small" />
+        </IconButton>
+      </span>
+    </Tooltip>
+  </Box>
+</TableCell>
                 </TableRow>
               )
             })

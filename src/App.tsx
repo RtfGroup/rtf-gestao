@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+
 import {
   BrowserRouter,
   Navigate,
@@ -16,6 +17,7 @@ import Produtos from './pages/Produtos'
 import Categorias from './pages/Categorias'
 import Compras from './pages/Compras'
 import NovaCompra from './pages/NovaCompra'
+import EditarCompra from './pages/EditarCompra'
 import DetalhesCompra from './pages/DetalhesCompra'
 import Fornecedores from './pages/Fornecedores'
 import Login from './pages/Login'
@@ -23,8 +25,14 @@ import Inventario from './pages/Inventario'
 import Clientes from './pages/Clientes'
 import NovaVenda from './pages/NovaVenda'
 import Vendas from './pages/Vendas'
+import DetalhesVenda from './pages/DetalhesVenda'
+import EditarVenda from './pages/EditarVenda'
 import ContasReceber from './pages/ContasReceber'
-
+import ContasPagar from './pages/ContasPagar'
+import DetalhesContaReceber from './pages/DetalhesContaReceber'
+import EditarContaReceber from './pages/EditarContaReceber'
+import DetalhesContaPagar from './pages/DetalhesContaPagar'
+import EditarContaPagar from './pages/EditarContaPagar'
 
 function RotaProtegida() {
   const [carregando, setCarregando] = useState(true)
@@ -40,7 +48,7 @@ function RotaProtegida() {
       setCarregando(false)
     }
 
-    verificarSessao()
+    void verificarSessao()
 
     const {
       data: { subscription },
@@ -72,24 +80,81 @@ function App() {
         <Route path="/login" element={<Login />} />
 
         <Route element={<RotaProtegida />}>
-<Route element={<MainLayout />}>
-  <Route path="/dashboard" element={<Dashboard />} />
-  <Route path="/produtos" element={<Produtos />} />
-  <Route path="/categorias" element={<Categorias />} />
-  <Route path="/clientes" element={<Clientes />} />
-  <Route path="/fornecedores" element={<Fornecedores />} />
-  <Route path="/compras" element={<Compras />} />
-  <Route path="/compras/nova" element={<NovaCompra />} />
-  <Route path="/compras/:id" element={<DetalhesCompra />} />
-  <Route path="/inventario" element={<Inventario />} />
-  <Route path="/vendas/nova" element={<NovaVenda />} />
-  <Route path="/vendas" element={<Vendas />} />
-  <Route path="/financeiro/contas-receber" element={<ContasReceber />} />
-</Route>
+          <Route element={<MainLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+
+            <Route path="/produtos" element={<Produtos />} />
+            <Route path="/categorias" element={<Categorias />} />
+            <Route path="/clientes" element={<Clientes />} />
+            <Route
+              path="/fornecedores"
+              element={<Fornecedores />}
+            />
+
+            <Route path="/compras" element={<Compras />} />
+            <Route path="/compras/nova" element={<NovaCompra />} />
+            <Route
+              path="/compras/:id"
+              element={<DetalhesCompra />}
+            />
+            <Route
+              path="/compras/:id/editar"
+              element={<EditarCompra />}
+            />
+
+            <Route path="/inventario" element={<Inventario />} />
+
+            <Route path="/vendas" element={<Vendas />} />
+            <Route path="/vendas/nova" element={<NovaVenda />} />
+            <Route
+              path="/vendas/:id"
+              element={<DetalhesVenda />}
+            />
+            <Route
+              path="/vendas/:id/editar"
+              element={<EditarVenda />}
+            />
+
+            <Route
+              path="/financeiro/contas-receber"
+              element={<ContasReceber />}
+            />
+
+            <Route
+  path="/financeiro/contas-pagar"
+  element={<ContasPagar />}
+/>
+
+<Route
+  path="/financeiro/contas-pagar/:id"
+  element={<DetalhesContaPagar />}
+/>
+
+<Route
+  path="/financeiro/contas-pagar/:id/editar"
+  element={<EditarContaPagar />}
+/>
+
+            <Route
+              path="/financeiro/contas-receber/:id"
+              element={<DetalhesContaReceber />}
+            />
+            <Route
+              path="/financeiro/contas-receber/:id/editar"
+              element={<EditarContaReceber />}
+            />
+          </Route>
         </Route>
 
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route
+          path="/"
+          element={<Navigate to="/dashboard" replace />}
+        />
+
+        <Route
+          path="*"
+          element={<Navigate to="/dashboard" replace />}
+        />
       </Routes>
     </BrowserRouter>
   )

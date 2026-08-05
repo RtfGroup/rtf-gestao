@@ -40,6 +40,7 @@ function MainLayout() {
 
   const [cadastrosAberto, setCadastrosAberto] = useState(true)
   const [estoqueAberto, setEstoqueAberto] = useState(true)
+const [financeiroAberto, setFinanceiroAberto] = useState(true)
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
@@ -219,16 +220,61 @@ function MainLayout() {
             <ListItemText primary="Vendas" />
           </ListItemButton>
 
-          <ListItemButton
-            selected={location.pathname.startsWith('/financeiro')}
-            onClick={() => navigate('/financeiro/contas-receber')}
-          >
-            <ListItemIcon sx={{ color: '#fff' }}>
-              <AccountBalanceWalletIcon />
-            </ListItemIcon>
+<ListItemButton
+  onClick={() => setFinanceiroAberto(!financeiroAberto)}
+>
+  <ListItemIcon sx={{ color: '#fff' }}>
+    <AccountBalanceWalletIcon />
+  </ListItemIcon>
 
-            <ListItemText primary="Financeiro" />
-          </ListItemButton>
+  <ListItemText primary="Financeiro" />
+
+  {financeiroAberto ? (
+    <ExpandLessIcon />
+  ) : (
+    <ExpandMoreIcon />
+  )}
+</ListItemButton>
+
+<Collapse
+  in={financeiroAberto}
+  timeout="auto"
+  unmountOnExit
+>
+  <List component="div" disablePadding>
+    <ListItemButton
+      sx={{ pl: 4 }}
+      selected={location.pathname.startsWith(
+        '/financeiro/contas-receber',
+      )}
+      onClick={() =>
+        navigate('/financeiro/contas-receber')
+      }
+    >
+      <ListItemIcon sx={{ color: '#fff' }}>
+        <AccountBalanceWalletIcon />
+      </ListItemIcon>
+
+      <ListItemText primary="Contas a Receber" />
+    </ListItemButton>
+
+    <ListItemButton
+      sx={{ pl: 4 }}
+      selected={location.pathname.startsWith(
+        '/financeiro/contas-pagar',
+      )}
+      onClick={() =>
+        navigate('/financeiro/contas-pagar')
+      }
+    >
+      <ListItemIcon sx={{ color: '#fff' }}>
+        <AccountBalanceWalletIcon />
+      </ListItemIcon>
+
+      <ListItemText primary="Contas a Pagar" />
+    </ListItemButton>
+  </List>
+</Collapse>
         </List>
       </Drawer>
 
