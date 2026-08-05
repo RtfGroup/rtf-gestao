@@ -114,14 +114,24 @@ function ContasReceber() {
   }, [contas])
 
   function abrirRecebimento(conta: ContaReceber) {
-    setContaSelecionada(conta)
+  if (conta.status?.toUpperCase() === 'RECEBIDO') {
+    setErro('Esta conta já foi totalmente recebida.')
+    return
   }
+
+  setContaSelecionada(conta)
+}
 
   function visualizarConta(conta: ContaReceber) {
   navigate(`/financeiro/contas-receber/${conta.id}`)
 }
 
 function editarConta(conta: ContaReceber) {
+  if (conta.status?.toUpperCase() === 'RECEBIDO') {
+    setErro('Esta conta já foi recebida e não pode ser alterada.')
+    return
+  }
+
   navigate(`/financeiro/contas-receber/${conta.id}/editar`)
 }
 

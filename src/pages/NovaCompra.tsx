@@ -55,7 +55,8 @@ export default function NovaCompra() {
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
   const [lendoNota, setLendoNota] = useState(false)
-const inputNotaRef = useRef<HTMLInputElement | null>(null)
+const [fotosNota, setFotosNota] = useState<File[]>([])
+  const inputNotaRef = useRef<HTMLInputElement | null>(null)
 
   const [itens, setItens] = useState<ItemCompra[]>([
     {
@@ -308,12 +309,14 @@ if (nota.fornecedor) {
 
 if (nota.itens?.length) {
   const novosItens: ItemCompra[] = []
+  const produtosDisponiveis = [...produtos]
 
   for (const [indice, item] of nota.itens.entries()) {
-    let produtoEncontrado = produtos.find(
+    const nomeItem = normalizarNome(item.nome ?? '')
+
+    let produtoEncontrado = produtosDisponiveis.find(
       (produto) =>
-        normalizarNome(produto.nome) ===
-        normalizarNome(item.nome ?? ''),
+        normalizarNome(produto.nome) === nomeItem,
     )
 
     if (!produtoEncontrado && item.nome) {
@@ -334,19 +337,56 @@ if (nota.itens?.length) {
       })
 
       produtoEncontrado = novoProduto
+      produtosDisponiveis.push(novoProduto)
+    }
 
-      setProdutos((lista) => [...lista, novoProduto])
+    if (!produtoEncontrado) {
+      continue
+    }
+
+    const itemJaAdicionado = novosItens.find(
+      (itemCompra) =>
+        itemCompra.produto === produtoEncontrado?.id,
+    )
+
+    if (itemJaAdicionado) {
+      itemJaAdicionado.quantidade += Number(
+        item.quantidade ?? 1,
+      )
+
+      itemJaAdicionado.valorUnitario = Number(
+        item.valorUnitario ?? itemJaAdicionado.valorUnitario,
+      )
+
+      continue
     }
 
     novosItens.push({
       id: Date.now() + indice,
-      produto: produtoEncontrado?.id ?? '',
+      produto: produtoEncontrado.id,
       quantidade: Number(item.quantidade ?? 1),
       valorUnitario: Number(item.valorUnitario ?? 0),
     })
   }
 
-    setItens(novosItens)
+  setProdutos(produtosDisponiveis)
+  setItens((anteriores) => {
+  const lista = [...anteriores]
+
+  for (const novo of novosItens) {
+    const existente = lista.find(
+  (item) => item.produto === novo.produto,
+)
+
+    if (existente) {
+      existente.quantidade += novo.quantidade
+    } else {
+      lista.push(novo)
+    }
+  }
+
+  return lista
+})
 }
 } catch (error) {
   console.error(error)
@@ -546,17 +586,24 @@ return (
   {lendoNota ? 'Lendo Nota...' : 'Ler Nota Fiscal'}
 
   <input
-    type="file"
-    accept="image/*"
-    hidden
+  type="file"
+  accept="image/*"
+  multiple
+  hidden
 onChange={async (event) => {
-  const arquivo = event.target.files?.[0]
+  const arquivos = Array.from(
+    event.target.files ?? [],
+  )
 
-  if (!arquivo) {
+  if (arquivos.length === 0) {
     return
   }
 
-  await lerNotaFiscal(arquivo)
+  setFotosNota(arquivos)
+
+  for (const arquivo of arquivos) {
+    await lerNotaFiscal(arquivo)
+  }
 
   event.target.value = ''
 }}

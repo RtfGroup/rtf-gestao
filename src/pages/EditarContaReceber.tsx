@@ -129,6 +129,9 @@ export default function EditarContaReceber() {
     void iniciar()
   }, [id])
 
+  const contaRecebida =
+  status?.toUpperCase() === 'RECEBIDO'
+
   async function salvarConta() {
     try {
       setErro('')
@@ -255,6 +258,12 @@ export default function EditarContaReceber() {
         </Button>
       </Box>
 
+{contaRecebida && (
+  <Alert severity="info" sx={{ mb: 3 }}>
+    Esta conta já foi recebida e não pode mais ser alterada.
+  </Alert>
+)}
+
       {erro && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {erro}
@@ -284,6 +293,7 @@ export default function EditarContaReceber() {
             fullWidth
             label="Cliente"
             value={clienteId}
+            disabled={contaRecebida}
             onChange={(event) =>
               setClienteId(event.target.value)
             }
@@ -306,6 +316,7 @@ export default function EditarContaReceber() {
             fullWidth
             label="Descrição"
             value={descricao}
+            disabled={contaRecebida}
             onChange={(event) =>
               setDescricao(event.target.value)
             }
@@ -316,6 +327,7 @@ export default function EditarContaReceber() {
             type="date"
             label="Data de vencimento"
             value={dataVencimento}
+            disabled={contaRecebida}
             onChange={(event) =>
               setDataVencimento(event.target.value)
             }
@@ -331,6 +343,7 @@ export default function EditarContaReceber() {
             type="date"
             label="Data de recebimento"
             value={dataRecebimento}
+            disabled={contaRecebida}
             onChange={(event) =>
               setDataRecebimento(event.target.value)
             }
@@ -346,6 +359,7 @@ export default function EditarContaReceber() {
             type="number"
             label="Valor original"
             value={valorOriginal}
+            disabled={contaRecebida}
             slotProps={{
               htmlInput: {
                 min: 0,
@@ -364,6 +378,7 @@ export default function EditarContaReceber() {
             type="number"
             label="Valor recebido"
             value={valorRecebido}
+            disabled={contaRecebida}
             slotProps={{
               htmlInput: {
                 min: 0,
@@ -382,6 +397,7 @@ export default function EditarContaReceber() {
             fullWidth
             label="Status"
             value={status}
+            disabled={contaRecebida}
             onChange={(event) =>
               setStatus(event.target.value)
             }
@@ -395,6 +411,7 @@ export default function EditarContaReceber() {
             fullWidth
             label="Forma de pagamento"
             value={formaPagamento}
+            disabled={contaRecebida}
             onChange={(event) =>
               setFormaPagamento(event.target.value)
             }
@@ -415,6 +432,7 @@ export default function EditarContaReceber() {
           multiline
           rows={4}
           value={observacoes}
+          disabled={contaRecebida}
           onChange={(event) =>
             setObservacoes(event.target.value)
           }
@@ -432,7 +450,7 @@ export default function EditarContaReceber() {
       >
         <Button
           variant="outlined"
-          disabled={salvando}
+          disabled={salvando || contaRecebida}
           onClick={() =>
             navigate('/financeiro/contas-receber')
           }
@@ -455,9 +473,11 @@ export default function EditarContaReceber() {
           disabled={salvando}
           onClick={() => void salvarConta()}
         >
-          {salvando
-            ? 'Salvando...'
-            : 'Salvar alterações'}
+          {contaRecebida
+  ? 'Conta já recebida'
+  : salvando
+    ? 'Salvando...'
+    : 'Salvar alterações'}
         </Button>
       </Box>
     </Box>

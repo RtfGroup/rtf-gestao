@@ -511,6 +511,7 @@ setContas(contasFormatadas)
     </IconButton>
   </Tooltip>
 
+  {conta.status?.toUpperCase() !== 'PAGO' && (
   <Tooltip title="Editar">
     <IconButton
       size="small"
@@ -524,20 +525,23 @@ setContas(contasFormatadas)
       <EditIcon fontSize="small" />
     </IconButton>
   </Tooltip>
+)}
 
+ {conta.status?.toUpperCase() !== 'PAGO' && (
   <Tooltip title="Pagar">
-    <span>
-      <IconButton
-        size="small"
-        color="success"
-        disabled={
-          conta.status?.toUpperCase() === 'PAGO'
-        }
-      >
-        <PaymentsIcon fontSize="small" />
-      </IconButton>
-    </span>
+    <IconButton
+      size="small"
+      color="success"
+      onClick={() =>
+        navigate(
+          `/financeiro/contas-pagar/${conta.id}/pagar`,
+        )
+      }
+    >
+      <PaymentsIcon fontSize="small" />
+    </IconButton>
   </Tooltip>
+)}
 </TableCell>
                   </TableRow>
                 )

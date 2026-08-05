@@ -59,14 +59,20 @@ export default function ModalRecebimento({
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <TextField
-            label="Valor Recebido"
-            type="number"
-            value={valor}
-            onChange={(e) =>
-              setValor(Number(e.target.value))
-            }
-            fullWidth
-          />
+  label="Valor Recebido"
+  type="number"
+  value={valor}
+  slotProps={{
+  htmlInput: {
+    min: 0,
+    step: 0.01,
+  },
+}}
+  onChange={(e) =>
+    setValor(Number(e.target.value))
+  }
+  fullWidth
+/>
 
           <TextField
             label="Data"
@@ -105,13 +111,21 @@ slotProps={{
         <Button
           variant="contained"
           disabled={carregando}
-          onClick={() =>
-            aoConfirmar({
-              valor,
-              data,
-              observacoes,
-            })
-          }
+          onClick={() => {
+  if (
+    conta &&
+    valor > Number(conta.saldo_pendente)
+  ) {
+    alert('O valor informado é maior que o saldo pendente.')
+    return
+  }
+
+  aoConfirmar({
+    valor,
+    data,
+    observacoes,
+  })
+}}
         >
           Confirmar
         </Button>

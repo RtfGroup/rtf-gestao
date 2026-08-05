@@ -193,28 +193,29 @@ export default function ContasReceberTabela({
       </IconButton>
     </Tooltip>
 
-    <Tooltip title="Editar">
-      <IconButton
-        size="small"
-        color="warning"
-        onClick={() => aoEditar(conta)}
-      >
-        <EditIcon fontSize="small" />
-      </IconButton>
-    </Tooltip>
+    {!recebida && (
+  <Tooltip title="Editar">
+    <IconButton
+      size="small"
+      color="warning"
+      onClick={() => aoEditar(conta)}
+    >
+      <EditIcon fontSize="small" />
+    </IconButton>
+  </Tooltip>
+)}
 
-    <Tooltip title="Receber">
-      <span>
-        <IconButton
-          size="small"
-          color="success"
-          disabled={recebida}
-          onClick={() => aoReceber(conta)}
-        >
-          <PaymentsIcon fontSize="small" />
-        </IconButton>
-      </span>
-    </Tooltip>
+    {!recebida && (
+  <Tooltip title="Receber">
+    <IconButton
+      size="small"
+      color="success"
+      onClick={() => aoReceber(conta)}
+    >
+      <PaymentsIcon fontSize="small" />
+    </IconButton>
+  </Tooltip>
+)}
   </Box>
 </TableCell>
                 </TableRow>

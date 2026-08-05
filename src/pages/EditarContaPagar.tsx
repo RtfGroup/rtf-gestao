@@ -138,6 +138,12 @@ console.log('ERROR:', error)
         </Alert>
       )}
 
+      {conta.status?.toUpperCase() === 'PAGO' && (
+  <Alert severity="info" sx={{ mb: 2 }}>
+    Esta conta já foi paga e não pode mais ser alterada.
+  </Alert>
+)}
+
       {sucesso && (
         <Alert severity="success" sx={{ mb: 2 }}>
           {sucesso}
@@ -280,11 +286,14 @@ console.log('ERROR:', error)
             </Button>
 
             <Button
-              variant="contained"
-              startIcon={<SaveIcon />}
-              disabled={salvando}
-              onClick={salvar}
-            >
+  variant="contained"
+  startIcon={<SaveIcon />}
+  disabled={
+    salvando ||
+    conta.status?.toUpperCase() === 'PAGO'
+  }
+  onClick={salvar}
+>
               {salvando
                 ? 'Salvando...'
                 : 'Salvar Alterações'}

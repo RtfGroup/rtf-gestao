@@ -31,11 +31,16 @@ import GraficoFluxoCaixa, {
 } from '../components/dashboard/GraficoFluxoCaixa'
 
 import ResumoExecutivoCard from '../components/dashboard/ResumoExecutivoCard'
+import RankingProdutos, {
+  type ProdutoRanking,
+} from '../components/dashboard/RankingProdutos'
 
 import {
   gerarInsights,
   type Insight,
 } from '../engine/ai/insights'
+
+import ChatRTFAI from '../components/dashboard/ChatRTFAI'
 
 import {
   gerarRecomendacoes,
@@ -49,19 +54,23 @@ interface ResumoDashboard {
   vendasMes: number
   receber: number
   pagar: number
+  recebidoMes: number
+  pagoMes: number
   saldoCaixa: number
   produtosEstoque: number
 }
 
 function Dashboard() {
   const [resumo, setResumo] = useState<ResumoDashboard>({
-    vendasHoje: 0,
-    vendasMes: 0,
-    receber: 0,
-    pagar: 0,
-    saldoCaixa: 0,
-    produtosEstoque: 0,
-  })
+  vendasHoje: 0,
+  vendasMes: 0,
+  receber: 0,
+  pagar: 0,
+  recebidoMes: 0,
+pagoMes: 0,
+  saldoCaixa: 0,
+  produtosEstoque: 0,
+})
 
   const [ultimasVendas, setUltimasVendas] =
     useState<UltimaVenda[]>([])
@@ -71,6 +80,9 @@ function Dashboard() {
 
   const [estoqueBaixo, setEstoqueBaixo] =
     useState<ProdutoEstoqueBaixo[]>([])
+
+    const [rankingProdutos, setRankingProdutos] =
+  useState<ProdutoRanking[]>([])
 
 const [graficoFaturamento, setGraficoFaturamento] =
   useState<DadoFaturamento[]>([])
@@ -222,11 +234,13 @@ setRecomendacoes(recomendacoesGeradas)
         1,
       )
             const [
-        resultadoVendasHoje,
-        resultadoVendasMes,
-        resultadoReceber,
-        resultadoPagar,
-        resultadoFluxo,
+  resultadoVendasHoje,
+  resultadoVendasMes,
+  resultadoReceber,
+  resultadoPagar,
+  resultadoRecebidoMes,
+  resultadoPagoMes,
+  resultadoFluxo,
         resultadoEstoque,
         resultadoUltimasVendas,
         resultadoUltimasCompras,
@@ -275,6 +289,32 @@ setRecomendacoes(recomendacoesGeradas)
           )
           .eq('empresa_id', empresaId)
           .neq('status', 'PAGO'),
+
+          supabase
+  .from('contas_receber')
+  .select('valor_recebido')
+  .eq('empresa_id', empresaId)
+  .gte(
+    'data_recebimento',
+    inicioMes.toISOString().split('T')[0],
+  )
+  .lt(
+    'data_recebimento',
+    inicioProximoMes.toISOString().split('T')[0],
+  ),
+
+supabase
+  .from('contas_pagar')
+  .select('valor_pago')
+  .eq('empresa_id', empresaId)
+  .gte(
+    'data_pagamento',
+    inicioMes.toISOString().split('T')[0],
+  )
+  .lt(
+    'data_pagamento',
+    inicioProximoMes.toISOString().split('T')[0],
+  ),
 
 supabase
   .from('fluxo_caixa')
@@ -363,6 +403,12 @@ supabase
       if (resultadoPagar.error)
         throw resultadoPagar.error
 
+      if (resultadoRecebidoMes.error)
+  throw resultadoRecebidoMes.error
+
+if (resultadoPagoMes.error)
+  throw resultadoPagoMes.error
+
       if (resultadoFluxo.error)
         throw resultadoFluxo.error
 
@@ -414,6 +460,22 @@ supabase
 
         return total + Math.max(saldo, 0)
       }, 0)
+
+      const recebidoMes = (
+  resultadoRecebidoMes.data ?? []
+).reduce(
+  (total, conta) =>
+    total + Number(conta.valor_recebido ?? 0),
+  0,
+)
+
+const pagoMes = (
+  resultadoPagoMes.data ?? []
+).reduce(
+  (total, conta) =>
+    total + Number(conta.valor_pago ?? 0),
+  0,
+)
 
       const saldoCaixa = (
         resultadoFluxo.data ?? []
@@ -689,14 +751,39 @@ setGraficoFluxoCaixa(
   dadosFluxoCaixa,
 )
 
+setRankingProdutos([
+  {
+    nome: 'Marmitex G',
+    quantidade: 42,
+    valor: 1092,
+  },
+  {
+    nome: 'Marmitex M',
+    quantidade: 35,
+    valor: 840,
+  },
+  {
+    nome: 'Refrigerante',
+    quantidade: 28,
+    valor: 224,
+  },
+  {
+    nome: 'Água',
+    quantidade: 18,
+    valor: 72,
+  },
+])
+
       setResumo({
-        vendasHoje,
-        vendasMes,
-        receber,
-        pagar,
-        saldoCaixa,
-        produtosEstoque,
-      })
+  vendasHoje,
+  vendasMes,
+  receber,
+  pagar,
+  recebidoMes,
+pagoMes,
+  saldoCaixa,
+  produtosEstoque,
+})
 
       setUltimasVendas(
         vendasRecentes,
@@ -754,6 +841,8 @@ setGraficoFluxoCaixa(
         insights={insights}
         recomendacoes={recomendacoes}
       />
+
+<ChatRTFAI />
 
       {erro && (
         <Alert
@@ -826,6 +915,37 @@ setGraficoFluxoCaixa(
               resumo.pagar,
             )}
           />
+
+<Grid
+  size={{
+    xs: 12,
+    sm: 6,
+    md: 4,
+  }}
+>
+  <ResumoCard
+    titulo="Recebido no Mês"
+    valor={formatarDinheiro(
+      resumo.recebidoMes,
+    )}
+  />
+</Grid>
+
+<Grid
+  size={{
+    xs: 12,
+    sm: 6,
+    md: 4,
+  }}
+>
+  <ResumoCard
+    titulo="Pago no Mês"
+    valor={formatarDinheiro(
+      resumo.pagoMes,
+    )}
+  />
+</Grid>
+
         </Grid>
 
         <Grid
@@ -868,6 +988,11 @@ setGraficoFluxoCaixa(
       <GraficoFluxoCaixa
   dados={graficoFluxoCaixa}
 />
+
+<Box sx={{ mt: 4 }}>
+  <RankingProdutos produtos={rankingProdutos} />
+</Box>
+
 
       <Box sx={{ mt: 4 }}>
         <UltimasVendas

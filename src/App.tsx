@@ -33,6 +33,7 @@ import DetalhesContaReceber from './pages/DetalhesContaReceber'
 import EditarContaReceber from './pages/EditarContaReceber'
 import DetalhesContaPagar from './pages/DetalhesContaPagar'
 import EditarContaPagar from './pages/EditarContaPagar'
+import PagarConta from './pages/PagarConta'
 
 function RotaProtegida() {
   const [carregando, setCarregando] = useState(true)
@@ -133,6 +134,11 @@ function App() {
 <Route
   path="/financeiro/contas-pagar/:id/editar"
   element={<EditarContaPagar />}
+/>
+
+<Route
+  path="/financeiro/contas-pagar/:id/pagar"
+  element={<PagarConta />}
 />
 
             <Route
