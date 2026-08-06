@@ -38,11 +38,22 @@ export function identificarComandoIA(
   }
 
   if (
-    comando.includes('caixa') ||
-    comando.includes('saldo')
-  ) {
-    return 'CAIXA'
-  }
+  comando.includes('caixa') ||
+  comando.includes('saldo') ||
+  comando.includes('quanto tenho em caixa') ||
+  comando.includes('fluxo de caixa') ||
+  comando.includes('quanto tenho para receber') ||
+  comando.includes('quanto tenho para pagar') ||
+  comando.includes('quanto vendi hoje') ||
+  comando.includes('quanto vendi esse mes') ||
+  comando.includes('quanto vendi este mes') ||
+  comando.includes('faturamento') ||
+  comando.includes('vendas de hoje') ||
+  comando.includes('vendas do mes') ||
+  comando.includes('vendas deste mes')
+) {
+  return 'CAIXA'
+}
 
   if (
     comando.includes('recebi') ||

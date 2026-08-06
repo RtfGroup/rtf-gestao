@@ -29,8 +29,22 @@ import type {
 
 import { identificarComandoIA } from '../../services/ia/comandoIA.service'
 import { interpretarCompraIA } from '../../services/ia/compraIA.service'
+import { interpretarRecebimentoIA } from '../../services/ia/recebimentoIA.service'
+import { interpretarPagamentoIA } from '../../services/ia/pagamentoIA.service'
+
+import {
+  localizarContaReceber,
+  registrarBaixaRecebimento,
+} from '../../services/ia/baixaRecebimentoIA.service'
+
+import {
+  localizarContaPagar,
+  registrarBaixaPagamento,
+} from '../../services/ia/baixaPagamentoIA.service'
+
 import { comprasService } from '../../services/compras'
 import { criarProduto } from '../../services/produtos'
+import { obterResumoDashboard } from './resumoDashboard.service'
 
 interface ContextoUsuario {
   empresaId: string
@@ -46,20 +60,54 @@ export default function ChatRTFAI() {
   const [empresaId, setEmpresaId] = useState('')
   const [usuarioId, setUsuarioId] = useState('')
 
-  const [produtos, setProdutos] = useState<ProdutoVenda[]>([])
-  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [produtos, setProdutos] =
+    useState<ProdutoVenda[]>([])
+
+  const [clientes, setClientes] =
+    useState<Cliente[]>([])
+
   const [formasPagamento, setFormasPagamento] =
     useState<FormaPagamento[]>([])
 
   const [pedidoPendente, setPedidoPendente] =
     useState<PedidoInterpretadoIA | null>(null)
 
-const [compraPendente, setCompraPendente] =
-  useState<ReturnType<typeof interpretarCompraIA> | null>(null)
+  const [compraPendente, setCompraPendente] =
+    useState<
+      ReturnType<typeof interpretarCompraIA> | null
+    >(null)
 
-  const [carregando, setCarregando] = useState(true)
-  const [processando, setProcessando] = useState(false)
+  const [recebimentoPendente, setRecebimentoPendente] =
+    useState<{
+      contaId: string
+      cliente: string
+      valor: number
+      formaPagamento: string
+    } | null>(null)
+
+  const [pagamentoPendente, setPagamentoPendente] =
+    useState<{
+      contaId: string
+      fornecedor: string
+      valor: number
+      formaPagamento: string
+    } | null>(null)
+
+  const [carregando, setCarregando] =
+    useState(true)
+
+  const [processando, setProcessando] =
+    useState(false)
+
   const [erro, setErro] = useState('')
+
+  const [resumoDashboard, setResumoDashboard] = useState({
+  saldoCaixa: 0,
+  vendasHoje: 0,
+  vendasMes: 0,
+  receber: 0,
+  pagar: 0,
+})
 
   useEffect(() => {
     void carregarDados()
@@ -67,9 +115,9 @@ const [compraPendente, setCompraPendente] =
 
   async function obterContextoUsuario(): Promise<ContextoUsuario> {
     const {
-      data: { user },
-      error: erroUsuario,
-    } = await supabase.auth.getUser()
+  data: { user },
+  error: erroUsuario,
+} = await supabase.auth.getUser()
 
     if (erroUsuario || !user) {
       throw new Error('Usuário não autenticado.')
@@ -87,7 +135,9 @@ const [compraPendente, setCompraPendente] =
     }
 
     if (!usuario?.empresa_id) {
-      throw new Error('Usuário sem empresa vinculada.')
+      throw new Error(
+        'Usuário sem empresa vinculada.',
+      )
     }
 
     return {
@@ -102,6 +152,9 @@ const [compraPendente, setCompraPendente] =
       setErro('')
 
       const contexto = await obterContextoUsuario()
+const resumoAtual = await obterResumoDashboard(
+  contexto.empresaId,
+)
 
       const [
         listaProdutos,
@@ -120,6 +173,7 @@ const [compraPendente, setCompraPendente] =
       setProdutos(listaProdutos)
       setClientes(listaClientes)
       setFormasPagamento(listaFormasPagamento)
+      setResumoDashboard(resumoAtual)
     } catch (error) {
       console.error('Erro ao carregar RTF AI:', error)
 
@@ -171,7 +225,7 @@ const [compraPendente, setCompraPendente] =
     ].join('\n')
   }
 
-  function enviar() {
+async function enviar() {
   try {
     setErro('')
     setPedidoPendente(null)
@@ -223,18 +277,171 @@ const [compraPendente, setCompraPendente] =
 return
 
 } else if (tipoComando === 'ESTOQUE') {
-      setResposta('📊 Consultando estoque...')
-    } else if (tipoComando === 'CAIXA') {
-      setResposta('💰 Consultando fluxo de caixa...')
-    } else if (tipoComando === 'RECEBIMENTO') {
-      setResposta(
-        '💵 Recebimento identificado.\n\nA integração financeira será conectada na próxima etapa.',
-      )
+  setResposta('📊 Consultando estoque...')
+
+} else if (tipoComando === 'CAIXA') {
+  const comandoFinanceiro = texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+
+  if (
+    comandoFinanceiro.includes('para receber') ||
+    comandoFinanceiro.includes('contas a receber')
+  ) {
+    setResposta(
+      `💵 Total a receber: ${formatarMoeda(
+        resumoDashboard.receber,
+      )}`,
+    )
+  } else if (
+    comandoFinanceiro.includes('para pagar') ||
+    comandoFinanceiro.includes('contas a pagar')
+  ) {
+    setResposta(
+      `💸 Total a pagar: ${formatarMoeda(
+        resumoDashboard.pagar,
+      )}`,
+    )
+  } else if (
+    comandoFinanceiro.includes('vendi hoje') ||
+    comandoFinanceiro.includes('vendas de hoje')
+  ) {
+    setResposta(
+      `📈 Vendas de hoje: ${formatarMoeda(
+        resumoDashboard.vendasHoje,
+      )}`,
+    )
+  } else if (
+    comandoFinanceiro.includes('vendi este mes') ||
+    comandoFinanceiro.includes('vendi esse mes') ||
+    comandoFinanceiro.includes('vendas do mes') ||
+    comandoFinanceiro.includes('faturamento')
+  ) {
+    setResposta(
+      `📊 Vendas do mês: ${formatarMoeda(
+        resumoDashboard.vendasMes,
+      )}`,
+    )
+  } else {
+    setResposta(
+      `💰 Saldo do caixa: ${formatarMoeda(
+        resumoDashboard.saldoCaixa,
+      )}`,
+    )
+  }
+
+} else if (tipoComando === 'RECEBIMENTO') {
+  const recebimento = interpretarRecebimentoIA(texto)
+
+  const conta = await localizarContaReceber(
+    empresaId,
+    recebimento.cliente,
+  )
+
+  if (!conta) {
+    setResposta(
+      `❌ Nenhuma conta em aberto encontrada para ${recebimento.cliente}.`,
+    )
+    setMensagem('')
+    return
+  }
+
+  setRecebimentoPendente({
+    contaId: conta.id,
+    cliente: recebimento.cliente,
+    valor: recebimento.valor,
+    formaPagamento: recebimento.formaPagamento,
+  })
+
+  setResposta(
+    [
+      '💵 Recebimento identificado.',
+      '',
+      `Cliente: ${recebimento.cliente}`,
+      `Valor: ${formatarMoeda(recebimento.valor)}`,
+      `Forma de pagamento: ${recebimento.formaPagamento}`,
+      recebimento.referencia
+        ? `Referência: ${recebimento.referencia}`
+        : '',
+      '',
+      'Confirme para registrar a baixa.',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  )
+
+setRecebimentoPendente({
+  contaId: conta.id,
+  cliente: recebimento.cliente,
+  valor: recebimento.valor,
+  formaPagamento: recebimento.formaPagamento,
+})
+
+setResposta(
+    [
+      '💵 Recebimento identificado.',
+      '',
+      `Cliente: ${recebimento.cliente}`,
+      `Valor: ${formatarMoeda(recebimento.valor)}`,
+      `Forma de pagamento: ${recebimento.formaPagamento}`,
+      recebimento.referencia
+        ? `Referência: ${recebimento.referencia}`
+        : '',
+      '',
+      'Na próxima etapa vamos localizar a conta e registrar a baixa.',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  )
     } else if (tipoComando === 'PAGAMENTO') {
-      setResposta(
-        '💸 Pagamento identificado.\n\nA integração financeira será conectada na próxima etapa.',
-      )
-    } else {
+  const pagamento = interpretarPagamentoIA(texto)
+
+const conta = await localizarContaPagar(
+  empresaId,
+  pagamento.fornecedor,
+)
+
+if (!conta) {
+  setResposta(
+`❌ Nenhuma conta em aberto encontrada para ${pagamento.fornecedor}.`,
+  )
+
+  setMensagem('')
+  return
+}
+
+setPagamentoPendente({
+  contaId: conta.id,
+  fornecedor: pagamento.fornecedor,
+  valor: pagamento.valor,
+  formaPagamento: pagamento.formaPagamento,
+})
+
+if (!conta) {
+  setResposta(
+    `❌ Nenhuma conta em aberto encontrada para ${pagamento.fornecedor}.`,
+  )
+  return
+}
+
+setResposta(
+  [
+    `💸 Pagamento identificado.`,
+    '',
+    `Fornecedor: ${pagamento.fornecedor}`,
+    `Valor: ${formatarMoeda(pagamento.valor)}`,
+    `Forma de pagamento: ${pagamento.formaPagamento}`,
+    pagamento.referencia
+      ? `Referência: ${pagamento.referencia}`
+      : '',
+    '',
+    'Confirme para registrar o pagamento.',
+  ]
+    .filter(Boolean)
+    .join('\n'),
+)
+}else {
       setResposta('Ainda não aprendi esse comando.')
     }
 
@@ -518,6 +725,54 @@ if (!produtoEncontrado) {
   }
 }
 
+async function confirmarRecebimento() {
+  try {
+    setErro('')
+
+    if (!recebimentoPendente) {
+      return
+    }
+
+    setProcessando(true)
+
+    await registrarBaixaRecebimento({
+      contaId: recebimentoPendente.contaId,
+      valor: recebimentoPendente.valor,
+      formaPagamento:
+        recebimentoPendente.formaPagamento,
+    })
+
+    setResposta(
+      [
+        '✅ Recebimento registrado com sucesso.',
+        '',
+        `Cliente: ${recebimentoPendente.cliente}`,
+        `Valor: ${formatarMoeda(
+          recebimentoPendente.valor,
+        )}`,
+        `Forma de pagamento: ${recebimentoPendente.formaPagamento}`,
+        '',
+        'Conta a receber, caixa e Dashboard foram atualizados.',
+      ].join('\n'),
+    )
+
+    setRecebimentoPendente(null)
+  } catch (error) {
+    console.error(
+      'Erro ao registrar recebimento pela IA:',
+      error,
+    )
+
+    setErro(
+      error instanceof Error
+        ? error.message
+        : 'Não foi possível registrar o recebimento.',
+    )
+  } finally {
+    setProcessando(false)
+  }
+}
+
   if (carregando) {
     return (
       <Paper
@@ -576,6 +831,111 @@ if (!produtoEncontrado) {
           {resposta}
         </Typography>
       </Paper>
+
+{recebimentoPendente && (
+  <Box
+    sx={{
+      display: 'flex',
+      justifyContent: 'flex-end',
+      gap: 1,
+      mb: 2,
+    }}
+  >
+    <Button
+      variant="outlined"
+      disabled={processando}
+      onClick={() => {
+        setRecebimentoPendente(null)
+        setResposta('Recebimento cancelado.')
+      }}
+    >
+      Cancelar
+    </Button>
+
+    <Button
+      variant="contained"
+      disabled={processando}
+      onClick={() => void confirmarRecebimento()}
+    >
+      {processando
+        ? 'Registrando...'
+        : 'Confirmar recebimento'}
+    </Button>
+  </Box>
+)}
+
+{pagamentoPendente && (
+  <Box
+    sx={{
+      display: 'flex',
+      justifyContent: 'flex-end',
+      gap: 1,
+      mb: 2,
+    }}
+  >
+    <Button
+      variant="outlined"
+      disabled={processando}
+      onClick={() => {
+        setPagamentoPendente(null)
+        setResposta('Pagamento cancelado.')
+      }}
+    >
+      Cancelar
+    </Button>
+
+    <Button
+      variant="contained"
+      disabled={processando}
+      onClick={async () => {
+        try {
+          setErro('')
+          setProcessando(true)
+
+          await registrarBaixaPagamento(
+            pagamentoPendente.contaId,
+            pagamentoPendente.valor,
+          )
+
+          setResposta(
+            [
+              '✅ Pagamento registrado com sucesso.',
+              '',
+              `Fornecedor: ${pagamentoPendente.fornecedor}`,
+              `Valor: ${formatarMoeda(
+                pagamentoPendente.valor,
+              )}`,
+              `Forma de pagamento: ${pagamentoPendente.formaPagamento}`,
+              '',
+              'Conta a pagar, caixa e Dashboard foram atualizados.',
+            ].join('\n'),
+          )
+
+          setPagamentoPendente(null)
+
+          await carregarDados()
+        } catch (error) {
+          console.error(
+            'Erro ao registrar pagamento pela IA:',
+            error,
+          )
+
+          setErro(
+            error instanceof Error
+              ? error.message
+              : 'Não foi possível registrar o pagamento.',
+          )
+        } finally {
+          setProcessando(false)
+        }
+      }}
+    >
+      {processando
+        ? 'Registrando...'
+        : 'Confirmar pagamento'}
+    </Button>
+  </Box>
+)}
 
       {compraPendente && (
   <Box
@@ -661,7 +1021,7 @@ if (!produtoEncontrado) {
               !event.shiftKey
             ) {
               event.preventDefault()
-              enviar()
+             void enviar()
             }
           }}
         />
@@ -669,7 +1029,7 @@ if (!produtoEncontrado) {
         <Button
           variant="contained"
           disabled={processando}
-          onClick={enviar}
+          onClick={() => void enviar()}
         >
           Enviar
         </Button>
