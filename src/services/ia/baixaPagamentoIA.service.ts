@@ -37,11 +37,13 @@ export async function localizarContaPagar(
     return null
   }
 
-  const { data: fornecedores, error: erroFornecedores } =
-    await supabase
-      .from('fornecedores')
-      .select('id,nome_fantasia,razao_social')
-      .in('id', idsFornecedores)
+  const {
+    data: fornecedores,
+    error: erroFornecedores,
+  } = await supabase
+    .from('fornecedores')
+    .select('id,nome_fantasia,razao_social')
+    .in('id', idsFornecedores)
 
   if (erroFornecedores) {
     throw erroFornecedores
@@ -73,12 +75,32 @@ export async function localizarContaPagar(
     return null
   }
 
-  return (
-    contas?.find(
-      (conta) =>
-        conta.fornecedor_id === fornecedorEncontrado.id,
-    ) ?? null
+  const contaEncontrada =
+    (contas ?? [])
+      .filter(
+        (conta) =>
+          conta.fornecedor_id === fornecedorEncontrado.id,
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.data_vencimento).getTime() -
+          new Date(b.data_vencimento).getTime(),
+      )[0] ?? null
+
+  if (!contaEncontrada) {
+    return null
+  }
+
+  const saldoPendente = Math.max(
+    Number(contaEncontrada.valor_original ?? 0) -
+      Number(contaEncontrada.valor_pago ?? 0),
+    0,
   )
+
+  return {
+    ...contaEncontrada,
+    saldo_pendente: saldoPendente,
+  }
 }
 
 export async function registrarBaixaPagamento(

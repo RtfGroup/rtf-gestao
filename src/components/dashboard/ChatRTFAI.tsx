@@ -31,6 +31,10 @@ import { identificarComandoIA } from '../../services/ia/comandoIA.service'
 import { interpretarCompraIA } from '../../services/ia/compraIA.service'
 import { interpretarRecebimentoIA } from '../../services/ia/recebimentoIA.service'
 import { interpretarPagamentoIA } from '../../services/ia/pagamentoIA.service'
+import {
+  gerarRespostaAnaliseFinanceira,
+  interpretarAnaliseFinanceiraIA,
+} from '../../services/ia/analiseFinanceiraIA.service'
 
 import {
   localizarContaReceber,
@@ -107,6 +111,16 @@ export default function ChatRTFAI() {
   vendasMes: 0,
   receber: 0,
   pagar: 0,
+
+  melhorCliente: undefined as string | undefined,
+  valorMelhorCliente: undefined as number | undefined,
+
+  clientesEmAberto: [] as {
+    nome: string
+    saldo: number
+  }[],
+  clienteMaiorDebito: undefined as string | undefined,
+valorClienteMaiorDebito: undefined as number | undefined,
 })
 
   useEffect(() => {
@@ -229,8 +243,10 @@ async function enviar() {
   try {
     setErro('')
     setPedidoPendente(null)
-
-    setCompraPendente(null)
+    await carregarDados()
+setCompraPendente(null)
+setRecebimentoPendente(null)
+setPagamentoPendente(null)
 
     const texto = mensagem.trim()
 
@@ -277,7 +293,79 @@ async function enviar() {
 return
 
 } else if (tipoComando === 'ESTOQUE') {
-  setResposta('📊 Consultando estoque...')
+  const comandoEstoque = texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+
+  const { data: estoqueBanco, error: erroEstoque } =
+    await supabase
+      .from('estoque')
+      .select(`
+        quantidade_atual,
+        produtos (
+          nome,
+          estoque_minimo
+        )
+      `)
+      .eq('empresa_id', empresaId)
+
+  if (erroEstoque) {
+    throw erroEstoque
+  }
+
+  const itens = estoqueBanco ?? []
+
+  if (
+    comandoEstoque.includes('estoque baixo') ||
+    comandoEstoque.includes('abaixo do minimo')
+  ) {
+    const baixos = itens.filter((item: any) => {
+      const produto = Array.isArray(item.produtos)
+        ? item.produtos[0]
+        : item.produtos
+
+      return (
+        Number(item.quantidade_atual ?? 0) <=
+        Number(produto?.estoque_minimo ?? 0)
+      )
+    })
+
+    setResposta(
+      `📦 Existem ${baixos.length} produtos com estoque baixo.`,
+    )
+  } else if (
+    comandoEstoque.includes('menos estoque') ||
+    comandoEstoque.includes('menor estoque')
+  ) {
+    const menor = [...itens].sort(
+      (a, b) =>
+        Number(a.quantidade_atual ?? 0) -
+        Number(b.quantidade_atual ?? 0),
+    )[0]
+
+    const produto = Array.isArray(menor?.produtos)
+      ? menor.produtos[0]
+      : menor?.produtos
+
+    setResposta(
+      menor
+        ? `📉 Produto com menor estoque: ${
+            produto?.nome ?? 'Produto'
+          } — ${Number(menor.quantidade_atual ?? 0)} unidades.`
+        : '📦 Nenhum produto encontrado no estoque.',
+    )
+  } else if (
+    comandoEstoque.includes('quantos produtos')
+  ) {
+    setResposta(
+      `📊 Existem ${itens.length} produtos cadastrados no estoque.`,
+    )
+  } else {
+    setResposta(
+      `📦 Existem ${itens.length} produtos no estoque.`,
+    )
+  }
 
 } else if (tipoComando === 'CAIXA') {
   const comandoFinanceiro = texto
@@ -347,19 +435,24 @@ return
     return
   }
 
-  setRecebimentoPendente({
-    contaId: conta.id,
-    cliente: recebimento.cliente,
-    valor: recebimento.valor,
-    formaPagamento: recebimento.formaPagamento,
-  })
+  const valorRecebimento =
+  recebimento.valor > 0
+    ? recebimento.valor
+    : Number(conta.saldo_pendente ?? 0)
+
+setRecebimentoPendente({
+  contaId: conta.id,
+  cliente: recebimento.cliente,
+  valor: valorRecebimento,
+  formaPagamento: recebimento.formaPagamento,
+})
 
   setResposta(
     [
       '💵 Recebimento identificado.',
       '',
       `Cliente: ${recebimento.cliente}`,
-      `Valor: ${formatarMoeda(recebimento.valor)}`,
+      `Valor: ${formatarMoeda(valorRecebimento)}`,
       `Forma de pagamento: ${recebimento.formaPagamento}`,
       recebimento.referencia
         ? `Referência: ${recebimento.referencia}`
@@ -371,29 +464,6 @@ return
       .join('\n'),
   )
 
-setRecebimentoPendente({
-  contaId: conta.id,
-  cliente: recebimento.cliente,
-  valor: recebimento.valor,
-  formaPagamento: recebimento.formaPagamento,
-})
-
-setResposta(
-    [
-      '💵 Recebimento identificado.',
-      '',
-      `Cliente: ${recebimento.cliente}`,
-      `Valor: ${formatarMoeda(recebimento.valor)}`,
-      `Forma de pagamento: ${recebimento.formaPagamento}`,
-      recebimento.referencia
-        ? `Referência: ${recebimento.referencia}`
-        : '',
-      '',
-      'Na próxima etapa vamos localizar a conta e registrar a baixa.',
-    ]
-      .filter(Boolean)
-      .join('\n'),
-  )
     } else if (tipoComando === 'PAGAMENTO') {
   const pagamento = interpretarPagamentoIA(texto)
 
@@ -411,10 +481,15 @@ if (!conta) {
   return
 }
 
+const valorPagamento =
+  pagamento.valor > 0
+    ? pagamento.valor
+    : Number(conta.saldo_pendente ?? 0)
+
 setPagamentoPendente({
   contaId: conta.id,
   fornecedor: pagamento.fornecedor,
-  valor: pagamento.valor,
+  valor: valorPagamento,
   formaPagamento: pagamento.formaPagamento,
 })
 
@@ -430,7 +505,7 @@ setResposta(
     `💸 Pagamento identificado.`,
     '',
     `Fornecedor: ${pagamento.fornecedor}`,
-    `Valor: ${formatarMoeda(pagamento.valor)}`,
+    `Valor: ${formatarMoeda(valorPagamento)}`,
     `Forma de pagamento: ${pagamento.formaPagamento}`,
     pagamento.referencia
       ? `Referência: ${pagamento.referencia}`
@@ -441,9 +516,21 @@ setResposta(
     .filter(Boolean)
     .join('\n'),
 )
-}else {
-      setResposta('Ainda não aprendi esse comando.')
-    }
+} else if (tipoComando === 'ANALISE') {
+  const analise = interpretarAnaliseFinanceiraIA(texto)
+
+  const respostaAnalise =
+    gerarRespostaAnaliseFinanceira(
+      analise,
+      resumoDashboard,
+      formatarMoeda,
+    )
+
+  setResposta(respostaAnalise)
+
+} else {
+  setResposta('Ainda não aprendi esse comando.')
+}
 
     setMensagem('')
   } catch (error) {
@@ -757,6 +844,8 @@ async function confirmarRecebimento() {
     )
 
     setRecebimentoPendente(null)
+
+    await carregarDados()
   } catch (error) {
     console.error(
       'Erro ao registrar recebimento pela IA:',

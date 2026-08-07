@@ -5,6 +5,7 @@ export type TipoComandoIA =
   | 'CAIXA'
   | 'RECEBIMENTO'
   | 'PAGAMENTO'
+  | 'ANALISE'
   | 'DESCONHECIDO'
 
 export function identificarComandoIA(
@@ -56,18 +57,45 @@ export function identificarComandoIA(
 }
 
   if (
-    comando.includes('recebi') ||
-    comando.includes('recebimento')
-  ) {
-    return 'RECEBIMENTO'
-  }
+  comando.includes('recebi') ||
+  comando.includes('recebimento') ||
+  comando.includes('cliente pagou') ||
+  comando.includes('pagou a conta') ||
+  comando.includes('pagou o fiado') ||
+  comando.includes('baixar recebimento') ||
+  comando.includes('dar baixa no recebimento')
+) {
+  return 'RECEBIMENTO'
+}
 
-  if (
-    comando.includes('paguei') ||
-    comando.includes('pagamento')
-  ) {
-    return 'PAGAMENTO'
-  }
+if (
+  comando.includes('paguei') ||
+  comando.includes('pagamento') ||
+  comando.includes('pagar fornecedor') ||
+  comando.includes('pagar conta') ||
+  comando.includes('conta paga') ||
+  comando.includes('baixar pagamento') ||
+  comando.includes('dar baixa no pagamento')
+) {
+  return 'PAGAMENTO'
+}
 
-  return 'DESCONHECIDO'
+if (
+  comando.includes('como esta minha situacao financeira') ||
+comando.includes('situacao financeira') ||
+comando.includes('como estao minhas financas') ||
+  comando.includes('resumo financeiro') ||
+  comando.includes('saude financeira') ||
+  comando.includes('como esta a empresa') ||
+  comando.includes('analise financeira') ||
+  comando.includes('analisar empresa') ||
+  comando.includes('o que recomenda') ||
+  comando.includes('o que voce recomenda') ||
+  comando.includes('recomendacao') ||
+  comando.includes('melhorar a empresa')
+) {
+  return 'ANALISE'
+}
+
+return 'DESCONHECIDO'
 }

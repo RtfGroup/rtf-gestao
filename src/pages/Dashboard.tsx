@@ -5,6 +5,8 @@ import {
   Box,
   CircularProgress,
   Grid,
+  TextField,
+MenuItem,
 } from '@mui/material'
 
 import ResumoCard from '../components/dashboard/ResumoCard'
@@ -95,6 +97,14 @@ const [graficoFaturamento, setGraficoFaturamento] =
 
   const [erro, setErro] = useState('')
 
+  const agora = new Date()
+
+const [mesSelecionado, setMesSelecionado] =
+  useState(agora.getMonth())
+
+const [anoSelecionado, setAnoSelecionado] =
+  useState(agora.getFullYear())
+
   const [insights, setInsights] =
   useState<Insight[]>([])
 
@@ -155,7 +165,7 @@ useEffect(() => {
   return () => {
     supabase.removeChannel(canal)
   }
-}, [])
+}, [mesSelecionado, anoSelecionado])
 
   async function obterEmpresaId() {
     const {
@@ -223,16 +233,16 @@ setRecomendacoes(recomendacoesGeradas)
       )
 
       const inicioMes = new Date(
-        agora.getFullYear(),
-        agora.getMonth(),
-        1,
-      )
+  anoSelecionado,
+  mesSelecionado,
+  1,
+)
 
-      const inicioProximoMes = new Date(
-        agora.getFullYear(),
-        agora.getMonth() + 1,
-        1,
-      )
+const inicioProximoMes = new Date(
+  anoSelecionado,
+  mesSelecionado + 1,
+  1,
+)
             const [
   resultadoVendasHoje,
   resultadoVendasMes,
@@ -246,6 +256,7 @@ setRecomendacoes(recomendacoesGeradas)
         resultadoUltimasCompras,
         resultadoEstoqueBaixo,
         resultadoGrafico,
+        resultadoRankingProdutos,
       ] = await Promise.all([
         supabase
           .from('vendas')
@@ -327,40 +338,57 @@ supabase
           .eq('empresa_id', empresaId)
           .gt('quantidade_atual', 0),
                   supabase
-          .from('vendas')
-          .select(`
-            id,
-            data_venda,
-            valor_total,
-            status,
-            status_pagamento,
-            clientes (
-              nome
-            )
-          `)
-          .eq('empresa_id', empresaId)
-          .order('data_venda', {
-            ascending: false,
-          })
-          .limit(5),
+  .from('vendas')
+  .select(`
+    id,
+    data_venda,
+    valor_total,
+    status,
+    status_pagamento,
+    clientes (
+      nome
+    )
+  `)
+  .eq('empresa_id', empresaId)
+  .gte(
+    'data_venda',
+    inicioMes.toISOString(),
+  )
+  .lt(
+    'data_venda',
+    inicioProximoMes.toISOString(),
+  )
+  .neq('status', 'cancelada')
+  .order('data_venda', {
+    ascending: false,
+  })
+  .limit(5),
 
         supabase
-          .from('compras')
-          .select(`
-            id,
-            data_compra,
-            valor_total,
-            status,
-            fornecedores (
-              razao_social,
-              nome_fantasia
-            )
-          `)
-          .eq('empresa_id', empresaId)
-          .order('data_compra', {
-            ascending: false,
-          })
-          .limit(5),
+  .from('compras')
+  .select(`
+    id,
+    data_compra,
+    valor_total,
+    status,
+    fornecedores (
+      razao_social,
+      nome_fantasia
+    )
+  `)
+  .eq('empresa_id', empresaId)
+  .gte(
+    'data_compra',
+    inicioMes.toISOString().split('T')[0],
+  )
+  .lt(
+    'data_compra',
+    inicioProximoMes.toISOString().split('T')[0],
+  )
+  .order('data_compra', {
+    ascending: false,
+  })
+  .limit(5),
 
         supabase
           .from('estoque')
@@ -388,6 +416,25 @@ supabase
             ).toISOString(),
           )
           .neq('status', 'cancelada'),
+
+supabase
+  .from('itens_venda')
+  .select(`
+    quantidade,
+    valor_unitario,
+    produtos (
+      nome
+    ),
+    vendas!inner (
+      empresa_id,
+      data_venda,
+      status
+    )
+  `)
+  .eq('vendas.empresa_id', empresaId)
+  .gte('vendas.data_venda', inicioMes.toISOString())
+  .lt('vendas.data_venda', inicioProximoMes.toISOString())
+  .neq('vendas.status', 'cancelada'),
 
       ])
 
@@ -425,6 +472,42 @@ if (resultadoPagoMes.error)
 
       if (resultadoGrafico.error)
   throw resultadoGrafico.error
+
+if (resultadoRankingProdutos.error)
+  throw resultadoRankingProdutos.error
+
+const rankingMap = new Map<
+  string,
+  ProdutoRanking
+>()
+
+for (const item of resultadoRankingProdutos.data ?? []) {
+  const produto = Array.isArray(item.produtos)
+    ? item.produtos[0]
+    : item.produtos
+
+  if (!produto?.nome) continue
+
+  const atual = rankingMap.get(produto.nome)
+
+  const quantidade = Number(item.quantidade ?? 0)
+  const valor =
+    quantidade * Number(item.valor_unitario ?? 0)
+
+  rankingMap.set(produto.nome, {
+    nome: produto.nome,
+    quantidade:
+      (atual?.quantidade ?? 0) + quantidade,
+    valor:
+      (atual?.valor ?? 0) + valor,
+  })
+}
+
+const rankingReal = [...rankingMap.values()]
+  .sort((a, b) => b.quantidade - a.quantidade)
+  .slice(0, 5)
+
+setRankingProdutos(rankingReal)
 
       const vendasHoje = (
         resultadoVendasHoje.data ?? []
@@ -751,28 +834,6 @@ setGraficoFluxoCaixa(
   dadosFluxoCaixa,
 )
 
-setRankingProdutos([
-  {
-    nome: 'Marmitex G',
-    quantidade: 42,
-    valor: 1092,
-  },
-  {
-    nome: 'Marmitex M',
-    quantidade: 35,
-    valor: 840,
-  },
-  {
-    nome: 'Refrigerante',
-    quantidade: 28,
-    valor: 224,
-  },
-  {
-    nome: 'Água',
-    quantidade: 18,
-    valor: 72,
-  },
-])
 
       setResumo({
   vendasHoje,
@@ -836,6 +897,60 @@ pagoMes,
   return (
     <Box>
       <CabecalhoDashboard />
+
+      <Box
+  sx={{
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: 2,
+    mb: 3,
+  }}
+>
+  <TextField
+    select
+    label="Mês"
+    value={mesSelecionado}
+    onChange={(e) =>
+      setMesSelecionado(Number(e.target.value))
+    }
+    sx={{ width: 150 }}
+  >
+    {[
+      'Janeiro',
+      'Fevereiro',
+      'Março',
+      'Abril',
+      'Maio',
+      'Junho',
+      'Julho',
+      'Agosto',
+      'Setembro',
+      'Outubro',
+      'Novembro',
+      'Dezembro',
+    ].map((mes, index) => (
+      <MenuItem key={mes} value={index}>
+        {mes}
+      </MenuItem>
+    ))}
+  </TextField>
+
+  <TextField
+    select
+    label="Ano"
+    value={anoSelecionado}
+    onChange={(e) =>
+      setAnoSelecionado(Number(e.target.value))
+    }
+    sx={{ width: 120 }}
+  >
+    {[2025, 2026, 2027, 2028].map((ano) => (
+  <MenuItem key={ano} value={ano}>
+    {ano}
+  </MenuItem>
+))}
+</TextField>
+</Box>
 
       <ResumoExecutivoCard
         insights={insights}
@@ -910,11 +1025,12 @@ pagoMes,
           }}
         >
           <ResumoCard
-            titulo="Contas a Pagar"
-            valor={formatarDinheiro(
-              resumo.pagar,
-            )}
-          />
+  titulo="Contas a Pagar"
+  valor={formatarDinheiro(
+    resumo.pagar,
+  )}
+/>
+</Grid>
 
 <Grid
   size={{
@@ -939,16 +1055,14 @@ pagoMes,
   }}
 >
   <ResumoCard
-    titulo="Pago no Mês"
-    valor={formatarDinheiro(
-      resumo.pagoMes,
-    )}
-  />
+  titulo="Pago no Mês"
+  valor={formatarDinheiro(
+    resumo.pagoMes,
+  )}
+/>
 </Grid>
 
-        </Grid>
-
-        <Grid
+<Grid
           size={{
             xs: 12,
             sm: 6,
