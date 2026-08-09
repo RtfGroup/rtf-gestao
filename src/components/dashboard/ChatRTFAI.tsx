@@ -878,48 +878,103 @@ async function confirmarRecebimento() {
   }
 
   return (
-    <Paper sx={{ p: 3, mt: 4 }}>
-      <Typography
-        variant="h5"
-        sx={{ fontWeight: 700 }}
-      >
-        RTF AI
-      </Typography>
+    <Paper
+  elevation={0}
+  sx={{
+    p: {
+      xs: 2,
+      md: 2,
+    },
+    mt: 0,
+    borderRadius: '16px',
+    background:
+      'linear-gradient(145deg, #0d1b2e 0%, #101f35 100%)',
+    border:
+      '1px solid rgba(212,175,55,0.18)',
+    boxShadow:
+      '0 12px 34px rgba(0,0,0,0.20)',
+    height: 310,
+minHeight: 310,
+display: 'flex',
+flexDirection: 'column',
+boxSizing: 'border-box',
+  }}
+>
+  <Typography
+    variant="h5"
+    sx={{
+      fontWeight: 800,
+      color: '#f8fafc',
+      letterSpacing: '-0.02em',
+    }}
+  >
+    RTF AI
+  </Typography>
 
-      <Typography
-        color="text.secondary"
-        sx={{ mb: 2 }}
-      >
-        Converse com o ERP.
-      </Typography>
+  <Typography
+    sx={{
+      mb: 2,
+      color: '#94a3b8',
+      fontSize: '0.92rem',
+    }}
+  >
+    Converse com o ERP.
+  </Typography>
 
-      {erro && (
-        <Alert
-          severity="error"
-          onClose={() => setErro('')}
-          sx={{ mb: 2 }}
-        >
-          {erro}
-        </Alert>
-      )}
+  {erro && (
+    <Alert
+      severity="error"
+      onClose={() => setErro('')}
+      sx={{ mb: 2 }}
+    >
+      {erro}
+    </Alert>
+  )}
 
-      <Paper
-        variant="outlined"
-        sx={{
-          p: 2,
-          height: 280,
-          mb: 2,
-          overflow: 'auto',
-        }}
-      >
-        <Typography
-          sx={{
-            whiteSpace: 'pre-line',
-          }}
-        >
-          {resposta}
-        </Typography>
-      </Paper>
+  <Paper
+    variant="outlined"
+    sx={{
+      p: 1.7,
+      height: 138,
+flexShrink: 0,
+      mb: 2,
+      overflow: 'auto',
+
+      borderRadius: '12px',
+
+        background:
+  'linear-gradient(135deg, #0d1b2e 0%, #10213b 55%, #0b1728 100%)',
+
+      border:
+        '1px solid rgba(212,175,55,0.25)',
+
+      boxShadow:
+        'inset 0 1px 0 rgba(255,255,255,0.02)',
+
+      '&::-webkit-scrollbar': {
+        width: '6px',
+      },
+
+      '&::-webkit-scrollbar-track': {
+        background: 'transparent',
+      },
+
+      '&::-webkit-scrollbar-thumb': {
+        background: 'rgba(212,175,55,0.28)',
+        borderRadius: '10px',
+      },
+    }}
+  >
+    <Typography
+      sx={{
+        whiteSpace: 'pre-line',
+        color: '#dbe5f1',
+        lineHeight: 1.2,
+      }}
+    >
+      {resposta}
+    </Typography>
+  </Paper>
 
 {recebimentoPendente && (
   <Box
@@ -1097,31 +1152,92 @@ async function confirmarRecebimento() {
         }}
       >
         <TextField
-          fullWidth
-          placeholder="Ex.: Vendi 2 Marmitex G e 1 Coca no Pix"
-          value={mensagem}
-          disabled={processando}
-          onChange={(event) =>
-            setMensagem(event.target.value)
-          }
-          onKeyDown={(event) => {
-            if (
-              event.key === 'Enter' &&
-              !event.shiftKey
-            ) {
-              event.preventDefault()
-             void enviar()
-            }
-          }}
-        />
+  fullWidth
+  placeholder="Ex.: Vendi 2 Marmitex G e 1 Coca no Pix"
+  value={mensagem}
+  disabled={processando}
+  onChange={(event) =>
+    setMensagem(event.target.value)
+  }
+  onKeyDown={(event) => {
+    if (
+      event.key === 'Enter' &&
+      !event.shiftKey
+    ) {
+      event.preventDefault()
+      void enviar()
+    }
+  }}
+  sx={{
+    '& .MuiOutlinedInput-root': {
+      height: 54,
+      borderRadius: '12px',
+      backgroundColor: '#f8fafc',
 
-        <Button
-          variant="contained"
-          disabled={processando}
-          onClick={() => void enviar()}
-        >
-          Enviar
-        </Button>
+      '& fieldset': {
+        borderColor: '#dbe3ec',
+      },
+
+      '&:hover fieldset': {
+        borderColor: '#94a3b8',
+      },
+
+      '&.Mui-focused fieldset': {
+        borderColor: '#d4af37',
+        borderWidth: '1.5px',
+      },
+    },
+
+    '& input': {
+      fontSize: '0.95rem',
+      color: '#0f172a',
+    },
+
+    '& input::placeholder': {
+      color: '#94a3b8',
+      opacity: 1,
+    },
+  }}
+/>
+
+<Button
+  variant="contained"
+  disabled={processando}
+  onClick={() => void enviar()}
+  sx={{
+    height: 54,
+    minWidth: 70,
+    px: 3,
+    borderRadius: '12px',
+
+    background:
+      'linear-gradient(135deg, #d4af37 0%, #e7bd45 100%)',
+
+    color: '#0b1626',
+    fontWeight: 800,
+    fontSize: '0.9rem',
+    textTransform: 'none',
+
+    boxShadow:
+      '0 6px 16px rgba(212,175,55,0.22)',
+
+    '&:hover': {
+      background:
+        'linear-gradient(135deg, #e0b93e 0%, #f1c75b 100%)',
+
+      boxShadow:
+        '0 8px 22px rgba(212,175,55,0.30)',
+    },
+
+    '&.Mui-disabled': {
+      background: '#cbd5e1',
+      color: '#64748b',
+    },
+  }}
+>
+  {processando ? 'Processando...' : 'Enviar'}
+</Button>
+          
       </Box>
     </Paper>
   )

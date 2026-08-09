@@ -4,9 +4,10 @@ import {
   Alert,
   Box,
   CircularProgress,
-  Grid,
   TextField,
-MenuItem,
+  MenuItem,
+  Paper,
+  Typography,
 } from '@mui/material'
 
 import ResumoCard from '../components/dashboard/ResumoCard'
@@ -36,6 +37,16 @@ import ResumoExecutivoCard from '../components/dashboard/ResumoExecutivoCard'
 import RankingProdutos, {
   type ProdutoRanking,
 } from '../components/dashboard/RankingProdutos'
+
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart'
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber'
+import ArrowCircleDownIcon from '@mui/icons-material/ArrowCircleDown'
+import ArrowCircleUpIcon from '@mui/icons-material/ArrowCircleUp'
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
+import PaymentsIcon from '@mui/icons-material/Payments'
+import SavingsIcon from '@mui/icons-material/Savings'
+import Inventory2Icon from '@mui/icons-material/Inventory2'
 
 import {
   gerarInsights,
@@ -85,6 +96,17 @@ pagoMes: 0,
 
     const [rankingProdutos, setRankingProdutos] =
   useState<ProdutoRanking[]>([])
+
+  const [rankingClientes, setRankingClientes] =
+  useState<
+    {
+      nome: string
+      valor: number
+    }[]
+  >([])
+
+  const [ticketMedio, setTicketMedio] =
+  useState(0)
 
 const [graficoFaturamento, setGraficoFaturamento] =
   useState<DadoFaturamento[]>([])
@@ -168,39 +190,59 @@ useEffect(() => {
 }, [mesSelecionado, anoSelecionado])
 
   async function obterEmpresaId() {
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser()
-        if (error) {
-      throw error
-    }
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
 
-    if (!user) {
-      throw new Error('Usuário não autenticado.')
-    }
-
-    const {
-      data: usuarioSistema,
-      error: erroUsuario,
-    } = await supabase
-      .from('usuarios')
-      .select('empresa_id')
-      .eq('id', user.id)
-      .single()
-
-    if (erroUsuario) {
-      throw erroUsuario
-    }
-
-    if (!usuarioSistema?.empresa_id) {
-      throw new Error(
-        'Empresa do usuário não encontrada.',
-      )
-    }
-
-    return usuarioSistema.empresa_id
+  if (error) {
+    throw error
   }
+
+  if (!user) {
+    throw new Error('Usuário não autenticado.')
+  }
+
+  const {
+    data: usuarioSistema,
+    error: erroUsuario,
+  } = await supabase
+    .from('usuarios')
+    .select('empresa_id, perfil')
+    .eq('id', user.id)
+    .single()
+
+  if (erroUsuario) {
+    throw erroUsuario
+  }
+
+  if (!usuarioSistema?.empresa_id) {
+    throw new Error(
+      'Empresa do usuário não encontrada.',
+    )
+  }
+
+  if (usuarioSistema.perfil === 'admin') {
+    const empresaSelecionada =
+      localStorage.getItem(
+        'rtf_admin_empresa_id',
+      )
+
+    const modoEmpresa =
+      localStorage.getItem(
+        'rtf_admin_modo_empresa',
+      )
+
+    if (
+      modoEmpresa === 'true' &&
+      empresaSelecionada
+    ) {
+      return empresaSelecionada
+    }
+  }
+
+  return usuarioSistema.empresa_id
+}
 
   async function carregarDashboard() {
     try {
@@ -257,7 +299,8 @@ const inicioProximoMes = new Date(
         resultadoEstoqueBaixo,
         resultadoGrafico,
         resultadoRankingProdutos,
-      ] = await Promise.all([
+resultadoRankingClientes,
+] = await Promise.all([
         supabase
           .from('vendas')
           .select('valor_total')
@@ -436,6 +479,20 @@ supabase
   .lt('vendas.data_venda', inicioProximoMes.toISOString())
   .neq('vendas.status', 'cancelada'),
 
+supabase
+  .from('vendas')
+  .select(`
+    cliente_id,
+    valor_total,
+    clientes (
+      nome
+    )
+  `)
+  .eq('empresa_id', empresaId)
+  .gte('data_venda', inicioMes.toISOString())
+  .lt('data_venda', inicioProximoMes.toISOString())
+  .neq('status', 'cancelada'),
+
       ])
 
       if (resultadoVendasHoje.error)
@@ -509,6 +566,41 @@ const rankingReal = [...rankingMap.values()]
 
 setRankingProdutos(rankingReal)
 
+const mapaClientes = new Map<
+  string,
+  {
+    nome: string
+    valor: number
+  }
+>()
+
+for (const venda of resultadoRankingClientes.data ?? []) {
+  const cliente = Array.isArray(venda.clientes)
+    ? venda.clientes[0]
+    : venda.clientes
+
+  const nome =
+    cliente?.nome ?? 'Cliente não informado'
+
+  const atual = mapaClientes.get(nome) ?? {
+    nome,
+    valor: 0,
+  }
+
+  atual.valor += Number(venda.valor_total ?? 0)
+
+  mapaClientes.set(nome, atual)
+}
+
+const rankingClientesReal = Array.from(
+  mapaClientes.values(),
+)
+  .filter((cliente) => cliente.valor > 0)
+.sort((a, b) => b.valor - a.valor)
+.slice(0, 5)
+
+setRankingClientes(rankingClientesReal)
+
       const vendasHoje = (
         resultadoVendasHoje.data ?? []
       ).reduce(
@@ -524,6 +616,16 @@ setRankingProdutos(rankingReal)
           total + Number(venda.valor_total ?? 0),
         0,
       )
+
+      const quantidadeVendasMes =
+  resultadoVendasMes.data?.length ?? 0
+
+const ticketMedioCalculado =
+  quantidadeVendasMes > 0
+    ? vendasMes / quantidadeVendasMes
+    : 0
+
+setTicketMedio(ticketMedioCalculado)
 
       const receber = (
         resultadoReceber.data ?? []
@@ -887,244 +989,655 @@ pagoMes,
 
   if (carregando) {
     return (
-      <Box>
-        <CabecalhoDashboard />
+  <Box
+    sx={{
+      width: '100%',
+      maxWidth: '1600px',
+      mx: 'auto',
+      pb: 6,
+    }}
+  >
+    <Box
+      sx={{
+        mb: 3,
+        p: {
+          xs: 2.5,
+          md: 3.5,
+        },
+        borderRadius: '18px',
+        background:
+          'linear-gradient(135deg, #07111f 0%, #0f1d33 70%, #17243a 100%)',
+        border: '1px solid rgba(212,175,55,0.18)',
+        boxShadow:
+          '0 12px 35px rgba(15,23,42,0.10)',
+        position: 'relative',
+        overflow: 'hidden',
+
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          width: 220,
+          height: 220,
+          borderRadius: '50%',
+          right: -80,
+          top: -120,
+          background:
+            'rgba(212,175,55,0.08)',
+          pointerEvents: 'none',
+        },
+
+        '& h1, & h2, & h3, & h4, & h5, & h6': {
+          color: '#ffffff',
+        },
+
+        '& p': {
+          color: 'rgba(255,255,255,0.70)',
+        },
+      }}
+    >
+    </Box>
         <CircularProgress />
       </Box>
     )
   }
 
   return (
-    <Box>
-      <CabecalhoDashboard />
+  <Box
+    sx={{
+      width: '100%',
+      maxWidth: '100%',
+      minWidth: 0,
+      minHeight: '100vh',
+
+      m: 0,
+      p: 0,
+
+      boxSizing: 'border-box',
+
+      color: '#f8fafc',
+
+background:
+  'linear-gradient(135deg, #07111f 0%, #0a1628 45%, #101c2e 100%)',
+
+    }}
+  >
 
       <Box
   sx={{
     display: 'flex',
-    justifyContent: 'flex-end',
+    flexDirection: {
+      xs: 'column',
+      md: 'row',
+    },
+    alignItems: {
+      xs: 'flex-start',
+      md: 'center',
+    },
+    justifyContent: 'space-between',
     gap: 2,
-    mb: 3,
+    mb: 2,
+    px: {
+      xs: 2,
+      md: 3,
+    },
+    py: {
+      xs: 2,
+      md: 2.4,
+    },
+
+    borderRadius: '16px',
+
+    background:
+      'linear-gradient(135deg, #07111f 0%, #0f1d33 70%, #17243a 100%)',
+
+    border:
+      '1px solid rgba(212,175,55,0.18)',
+
+    boxShadow:
+      '0 10px 28px rgba(0,0,0,0.20)',
+
+    position: 'relative',
+    overflow: 'hidden',
+
+    '&::after': {
+      content: '""',
+      position: 'absolute',
+      width: 170,
+      height: 170,
+      borderRadius: '50%',
+      right: -65,
+      top: -95,
+      background:
+        'rgba(212,175,55,0.07)',
+      pointerEvents: 'none',
+    },
   }}
 >
-  <TextField
-    select
-    label="Mês"
-    value={mesSelecionado}
-    onChange={(e) =>
-      setMesSelecionado(Number(e.target.value))
-    }
-    sx={{ width: 150 }}
+  <Box
+    sx={{
+      position: 'relative',
+      zIndex: 1,
+      minWidth: 0,
+    }}
   >
-    {[
-      'Janeiro',
-      'Fevereiro',
-      'Março',
-      'Abril',
-      'Maio',
-      'Junho',
-      'Julho',
-      'Agosto',
-      'Setembro',
-      'Outubro',
-      'Novembro',
-      'Dezembro',
-    ].map((mes, index) => (
-      <MenuItem key={mes} value={index}>
-        {mes}
-      </MenuItem>
-    ))}
-  </TextField>
+    <CabecalhoDashboard />
+  </Box>
 
-  <TextField
-    select
-    label="Ano"
-    value={anoSelecionado}
-    onChange={(e) =>
-      setAnoSelecionado(Number(e.target.value))
-    }
-    sx={{ width: 120 }}
+  <Box
+    sx={{
+      position: 'relative',
+      zIndex: 1,
+
+      display: 'flex',
+      gap: 1.25,
+      flexShrink: 0,
+
+      width: {
+        xs: '100%',
+        md: 'auto',
+      },
+
+      '& .MuiOutlinedInput-root': {
+        height: 52,
+        color: '#f8fafc',
+        backgroundColor:
+          'rgba(8,20,38,0.82)',
+        borderRadius: '12px',
+
+        '& fieldset': {
+          borderColor:
+            'rgba(148,163,184,0.18)',
+        },
+
+        '&:hover fieldset': {
+          borderColor:
+            'rgba(212,175,55,0.40)',
+        },
+
+        '&.Mui-focused fieldset': {
+          borderColor: '#d4af37',
+        },
+      },
+
+      '& .MuiInputLabel-root': {
+        color: '#94a3b8',
+      },
+
+      '& .MuiSvgIcon-root': {
+        color: '#d4af37',
+      },
+    }}
   >
-    {[2025, 2026, 2027, 2028].map((ano) => (
-  <MenuItem key={ano} value={ano}>
-    {ano}
-  </MenuItem>
-))}
-</TextField>
+    <TextField
+      select
+      label="Mês"
+      value={mesSelecionado}
+      onChange={(e) =>
+        setMesSelecionado(
+          Number(e.target.value),
+        )
+      }
+      sx={{
+        width: {
+          xs: '100%',
+          sm: 150,
+        },
+      }}
+    >
+      {[
+        'Janeiro',
+        'Fevereiro',
+        'Março',
+        'Abril',
+        'Maio',
+        'Junho',
+        'Julho',
+        'Agosto',
+        'Setembro',
+        'Outubro',
+        'Novembro',
+        'Dezembro',
+      ].map((mes, index) => (
+        <MenuItem
+          key={mes}
+          value={index}
+        >
+          {mes}
+        </MenuItem>
+      ))}
+    </TextField>
+
+    <TextField
+      select
+      label="Ano"
+      value={anoSelecionado}
+      onChange={(e) =>
+        setAnoSelecionado(
+          Number(e.target.value),
+        )
+      }
+      sx={{
+        width: {
+          xs: '100%',
+          sm: 120,
+        },
+      }}
+    >
+      {[2025, 2026, 2027, 2028].map(
+        (ano) => (
+          <MenuItem
+            key={ano}
+            value={ano}
+          >
+            {ano}
+          </MenuItem>
+        ),
+      )}
+    </TextField>
+  </Box>
 </Box>
 
-      <ResumoExecutivoCard
-        insights={insights}
-        recomendacoes={recomendacoes}
-      />
+{/* INDICADORES */}
+<Box
+  sx={{
+    display: 'grid',
+    gridTemplateColumns: {
+      xs: '1fr',
+      sm: 'repeat(2, minmax(0, 1fr))',
+      md: 'repeat(3, minmax(0, 1fr))',
+      lg: 'repeat(5, minmax(0, 1fr))',
+    },
+    gap: 1.25,
+    mb: 2,
+    width: '100%',
 
-<ChatRTFAI />
+    '& > *': {
+      minWidth: 0,
+    },
+  }}
+>
+  <ResumoCard
+  titulo="Vendas Hoje"
+  valor={formatarDinheiro(resumo.vendasHoje)}
+  icone={<ShoppingCartIcon />}
+  cor="#f5b91b"
+/>
 
-      {erro && (
-        <Alert
-          severity="error"
-          sx={{ mb: 3 }}
-        >
-          {erro}
-        </Alert>
-      )}
+<ResumoCard
+  titulo="Vendas do Mês"
+  valor={formatarDinheiro(resumo.vendasMes)}
+  icone={<CalendarMonthIcon />}
+  cor="#f5b91b"
+/>
 
-      <Grid
-        container
-        spacing={3}
-      >
-        <Grid
-          size={{
-            xs: 12,
-            sm: 6,
-            md: 4,
-          }}
-        >
-          <ResumoCard
-            titulo="Vendas Hoje"
-            valor={formatarDinheiro(
-              resumo.vendasHoje,
-            )}
-          />
-        </Grid>
+<ResumoCard
+  titulo="Ticket Médio"
+  valor={formatarDinheiro(ticketMedio)}
+  icone={<ConfirmationNumberIcon />}
+  cor="#f5b91b"
+/>
 
-        <Grid
-          size={{
-            xs: 12,
-            sm: 6,
-            md: 4,
-          }}
-        >
-          <ResumoCard
-            titulo="Vendas do Mês"
-            valor={formatarDinheiro(
-              resumo.vendasMes,
-            )}
-          />
-        </Grid>
+<ResumoCard
+  titulo="Contas a Receber"
+  valor={formatarDinheiro(resumo.receber)}
+  icone={<ArrowCircleDownIcon />}
+  cor="#f5b91b"
+/>
 
-        <Grid
-          size={{
-            xs: 12,
-            sm: 6,
-            md: 4,
-          }}
-        >
-          <ResumoCard
-            titulo="Contas a Receber"
-            valor={formatarDinheiro(
-              resumo.receber,
-            )}
-          />
-        </Grid>
-
-        <Grid
-          size={{
-            xs: 12,
-            sm: 6,
-            md: 4,
-          }}
-        >
-          <ResumoCard
+<ResumoCard
   titulo="Contas a Pagar"
-  valor={formatarDinheiro(
-    resumo.pagar,
-  )}
+  valor={formatarDinheiro(resumo.pagar)}
+  icone={<ArrowCircleUpIcon />}
+  cor="#f5b91b"
 />
-</Grid>
 
-<Grid
-  size={{
-    xs: 12,
-    sm: 6,
-    md: 4,
-  }}
->
-  <ResumoCard
-    titulo="Recebido no Mês"
-    valor={formatarDinheiro(
-      resumo.recebidoMes,
-    )}
-  />
-</Grid>
+<ResumoCard
+  titulo="Recebido no Mês"
+  valor={formatarDinheiro(resumo.recebidoMes)}
+  icone={<AccountBalanceWalletIcon />}
+  cor="#22c55e"
+/>
 
-<Grid
-  size={{
-    xs: 12,
-    sm: 6,
-    md: 4,
-  }}
->
-  <ResumoCard
+<ResumoCard
   titulo="Pago no Mês"
-  valor={formatarDinheiro(
-    resumo.pagoMes,
-  )}
+  valor={formatarDinheiro(resumo.pagoMes)}
+  icone={<PaymentsIcon />}
+  cor="#ef4444"
 />
-</Grid>
 
-<Grid
-          size={{
-            xs: 12,
-            sm: 6,
-            md: 4,
-          }}
-        >
-          <ResumoCard
-            titulo="Saldo do Caixa"
-            valor={formatarDinheiro(
-              resumo.saldoCaixa,
-            )}
-          />
-        </Grid>
-
-        <Grid
-          size={{
-            xs: 12,
-            sm: 6,
-            md: 4,
-          }}
-        >
-          <ResumoCard
-            titulo="Produtos em Estoque"
-            valor={`${resumo.produtosEstoque} ${
-              resumo.produtosEstoque === 1
-                ? 'Produto'
-                : 'Produtos'
-            }`}
-          />
-        </Grid>
-      </Grid>
-
-      <GraficoFaturamento
-        dados={graficoFaturamento}
-      />
-
-      <GraficoFluxoCaixa
-  dados={graficoFluxoCaixa}
+<ResumoCard
+  titulo="Saldo do Caixa"
+  valor={formatarDinheiro(resumo.saldoCaixa)}
+  icone={<SavingsIcon />}
+  cor="#2196f3"
 />
+
+<ResumoCard
+  titulo="Produtos em Estoque"
+  valor={`${resumo.produtosEstoque} ${
+    resumo.produtosEstoque === 1
+      ? 'Produto'
+      : 'Produtos'
+  }`}
+  icone={<Inventory2Icon />}
+  cor="#a855f7"
+/>
+</Box>
+
+      {/* ÁREA DE INTELIGÊNCIA */}
+<Box
+  sx={{
+    display: 'grid',
+    gridTemplateColumns: {
+      lg: 'minmax(0, 1.2fr) minmax(490px, 1fr)',
+      
+    },
+    gap: 2,
+    mb: 2,
+    width: '100%',
+    alignItems: 'stretch',
+    '& > *': {
+  minWidth: 0,
+  height: '100%',
+},
+
+    '& > .MuiPaper-root': {
+      mt: '0 !important',
+      mb: '0 !important',
+    },
+  }}
+>
+  <ResumoExecutivoCard
+    insights={insights}
+    recomendacoes={recomendacoes}
+  />
+
+  <ChatRTFAI />
+</Box>
+
+{erro && (
+  <Alert
+    severity="error"
+    sx={{ mb: 2 }}
+  >
+    {erro}
+  </Alert>
+)}
+
+{/* GRÁFICOS */}
+<Box
+  sx={{
+    display: 'grid',
+    gridTemplateColumns: {
+      xs: '1fr',
+      lg: 'repeat(2, minmax(0, 1fr))',
+    },
+    gap: 2,
+
+    '& > .MuiPaper-root': {
+      mt: '0 !important',
+      height: '100%',
+    },
+  }}
+>
+  <GraficoFaturamento
+    dados={graficoFaturamento}
+  />
+
+  <GraficoFluxoCaixa
+    dados={graficoFluxoCaixa}
+  />
+</Box>
 
 <Box sx={{ mt: 4 }}>
-  <RankingProdutos produtos={rankingProdutos} />
+              <Box
+  sx={{
+    display: 'grid',
+    gridTemplateColumns: {
+      xs: '1fr',
+      lg: 'repeat(2, minmax(0, 1fr))',
+    },
+    gap: 2,
+    mt: 2,
+
+    '& > .MuiPaper-root': {
+      mt: '0 !important',
+      height: '100%',
+    },
+  }}
+>
+  <RankingProdutos
+    produtos={rankingProdutos}
+  />
+
+  <Paper
+    elevation={0}
+    sx={{
+      p: {
+        xs: 2,
+        md: 3,
+      },
+      borderRadius: '16px',
+      overflow: 'hidden',
+      position: 'relative',
+
+      background:
+        'linear-gradient(145deg, #101c2e 0%, #0b1626 100%)',
+
+      border:
+        '1px solid rgba(148,163,184,0.12)',
+
+      boxShadow:
+        '0 10px 30px rgba(0,0,0,0.18)',
+
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '2px',
+        background:
+          'linear-gradient(90deg, #d4af37, #f1c75b, transparent 80%)',
+      },
+    }}
+  >
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1.5,
+        mb: 2.5,
+      }}
+    >
+      <Box
+        sx={{
+          width: 4,
+          height: 38,
+          borderRadius: '10px',
+          background:
+            'linear-gradient(180deg, #f1c75b, #d4af37)',
+        }}
+      />
+
+      <Box>
+        <Typography
+          variant="h6"
+          sx={{
+            fontWeight: 800,
+            color: '#f8fafc',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          Clientes que mais compraram
+        </Typography>
+
+        <Typography
+          sx={{
+            color: '#94a3b8',
+            fontSize: '0.82rem',
+          }}
+        >
+          Ranking de clientes no período selecionado
+        </Typography>
+      </Box>
+    </Box>
+
+    {rankingClientes.length === 0 ? (
+      <Box
+        sx={{
+          py: 5,
+          px: 2,
+          textAlign: 'center',
+          borderRadius: '12px',
+          border:
+            '1px dashed rgba(148,163,184,0.16)',
+          background:
+            'rgba(5,14,27,0.22)',
+        }}
+      >
+        <Typography
+          sx={{
+            color: '#64748b',
+            fontSize: '0.9rem',
+          }}
+        >
+          Nenhum cliente no período selecionado.
+        </Typography>
+      </Box>
+    ) : (
+      rankingClientes.map(
+        (cliente, index) => (
+          <Box
+            key={`${cliente.nome}-${index}`}
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 2,
+              py: 1.5,
+              px: 1,
+
+              borderBottom:
+                index <
+                rankingClientes.length - 1
+                  ? '1px solid rgba(148,163,184,0.10)'
+                  : 'none',
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+              }}
+            >
+              <Box
+                sx={{
+                  width: 30,
+                  height: 30,
+                  flexShrink: 0,
+                  borderRadius: '9px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+
+                  background:
+                    'rgba(212,175,55,0.10)',
+
+                  border:
+                    '1px solid rgba(212,175,55,0.20)',
+                }}
+              >
+                <Typography
+                  sx={{
+                    color: '#d4af37',
+                    fontWeight: 800,
+                    fontSize: '0.78rem',
+                  }}
+                >
+                  {index + 1}
+                </Typography>
+              </Box>
+
+              <Typography
+                sx={{
+                  color: '#e2e8f0',
+                  fontWeight: 600,
+                  fontSize: '0.92rem',
+                }}
+              >
+                {cliente.nome}
+              </Typography>
+            </Box>
+
+            <Typography
+              sx={{
+                color: '#f8fafc',
+                fontWeight: 800,
+                fontSize: '0.9rem',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {formatarDinheiro(
+                cliente.valor,
+              )}
+            </Typography>
+          </Box>
+        ),
+      )
+    )}
+  </Paper>
+
+  <Box
+    sx={{
+      minWidth: 0,
+
+      '& > .MuiPaper-root': {
+        mt: '0 !important',
+      },
+    }}
+  >
+    <UltimasVendas
+      vendas={ultimasVendas}
+      carregando={carregando}
+    />
+  </Box>
+
+  <Box
+    sx={{
+      minWidth: 0,
+
+      '& > .MuiPaper-root': {
+        mt: '0 !important',
+      },
+    }}
+  >
+    <UltimasCompras
+      compras={ultimasCompras}
+      carregando={carregando}
+    />
+  </Box>
 </Box>
 
+<Box
+  sx={{
+    mt: 2,
 
-      <Box sx={{ mt: 4 }}>
-        <UltimasVendas
-          vendas={ultimasVendas}
-          carregando={carregando}
-        />
-      </Box>
+    '& > .MuiPaper-root': {
+      mt: '0 !important',
+    },
+  }}
+>
+    <EstoqueBaixo
+    produtos={estoqueBaixo}
+    carregando={carregando}
+  />
+</Box>
 
-      <UltimasCompras
-        compras={ultimasCompras}
-        carregando={carregando}
-      />
+</Box>
 
-      <EstoqueBaixo
-        produtos={estoqueBaixo}
-        carregando={carregando}
-      />
-    </Box>
+</Box>
   )
 }
 

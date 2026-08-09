@@ -22,7 +22,10 @@ import DetalhesCompra from './pages/DetalhesCompra'
 import Fornecedores from './pages/Fornecedores'
 import Login from './pages/Login'
 import Inventario from './pages/Inventario'
+import Estoque from './pages/Estoque'
 import Clientes from './pages/Clientes'
+import ClientesRTF from './pages/ClientesRTF'
+import ClienteRTFDetalhes from './pages/ClienteRTFDetalhes'
 import NovaVenda from './pages/NovaVenda'
 import Vendas from './pages/Vendas'
 import DetalhesVenda from './pages/DetalhesVenda'
@@ -36,8 +39,11 @@ import EditarContaPagar from './pages/EditarContaPagar'
 import PagarConta from './pages/PagarConta'
 
 function RotaProtegida() {
-  const [carregando, setCarregando] = useState(true)
-  const [autenticado, setAutenticado] = useState(false)
+  const [carregando, setCarregando] =
+    useState(true)
+
+  const [autenticado, setAutenticado] =
+    useState(false)
 
   useEffect(() => {
     async function verificarSessao() {
@@ -53,10 +59,12 @@ function RotaProtegida() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_evento, session) => {
-      setAutenticado(Boolean(session))
-      setCarregando(false)
-    })
+    } = supabase.auth.onAuthStateChange(
+      (_evento, session) => {
+        setAutenticado(Boolean(session))
+        setCarregando(false)
+      },
+    )
 
     return () => {
       subscription.unsubscribe()
@@ -78,39 +86,93 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/login"
+          element={<Login />}
+        />
 
         <Route element={<RotaProtegida />}>
           <Route element={<MainLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route
+              path="/dashboard"
+              element={<Dashboard />}
+            />
 
-            <Route path="/produtos" element={<Produtos />} />
-            <Route path="/categorias" element={<Categorias />} />
-            <Route path="/clientes" element={<Clientes />} />
+            <Route
+              path="/admin/clientes-rtf"
+              element={<ClientesRTF />}
+            />
+
+            <Route
+  path="/admin/clientes-rtf/:empresaId"
+  element={<ClienteRTFDetalhes />}
+/>
+
+            <Route
+              path="/produtos"
+              element={<Produtos />}
+            />
+
+            <Route
+              path="/categorias"
+              element={<Categorias />}
+            />
+
+            <Route
+              path="/clientes"
+              element={<Clientes />}
+            />
+
             <Route
               path="/fornecedores"
               element={<Fornecedores />}
             />
 
-            <Route path="/compras" element={<Compras />} />
-            <Route path="/compras/nova" element={<NovaCompra />} />
+            <Route
+              path="/compras"
+              element={<Compras />}
+            />
+
+            <Route
+              path="/compras/nova"
+              element={<NovaCompra />}
+            />
+
             <Route
               path="/compras/:id"
               element={<DetalhesCompra />}
             />
+
             <Route
               path="/compras/:id/editar"
               element={<EditarCompra />}
             />
 
-            <Route path="/inventario" element={<Inventario />} />
+<Route
+  path="/estoque"
+  element={<Estoque />}
+/>
 
-            <Route path="/vendas" element={<Vendas />} />
-            <Route path="/vendas/nova" element={<NovaVenda />} />
+            <Route
+              path="/inventario"
+              element={<Inventario />}
+            />
+
+            <Route
+              path="/vendas"
+              element={<Vendas />}
+            />
+
+            <Route
+              path="/vendas/nova"
+              element={<NovaVenda />}
+            />
+
             <Route
               path="/vendas/:id"
               element={<DetalhesVenda />}
             />
+
             <Route
               path="/vendas/:id/editar"
               element={<EditarVenda />}
@@ -122,44 +184,55 @@ function App() {
             />
 
             <Route
-  path="/financeiro/contas-pagar"
-  element={<ContasPagar />}
-/>
-
-<Route
-  path="/financeiro/contas-pagar/:id"
-  element={<DetalhesContaPagar />}
-/>
-
-<Route
-  path="/financeiro/contas-pagar/:id/editar"
-  element={<EditarContaPagar />}
-/>
-
-<Route
-  path="/financeiro/contas-pagar/:id/pagar"
-  element={<PagarConta />}
-/>
-
-            <Route
               path="/financeiro/contas-receber/:id"
               element={<DetalhesContaReceber />}
             />
+
             <Route
               path="/financeiro/contas-receber/:id/editar"
               element={<EditarContaReceber />}
+            />
+
+            <Route
+              path="/financeiro/contas-pagar"
+              element={<ContasPagar />}
+            />
+
+            <Route
+              path="/financeiro/contas-pagar/:id"
+              element={<DetalhesContaPagar />}
+            />
+
+            <Route
+              path="/financeiro/contas-pagar/:id/editar"
+              element={<EditarContaPagar />}
+            />
+
+            <Route
+              path="/financeiro/contas-pagar/:id/pagar"
+              element={<PagarConta />}
             />
           </Route>
         </Route>
 
         <Route
           path="/"
-          element={<Navigate to="/dashboard" replace />}
+          element={
+            <Navigate
+              to="/dashboard"
+              replace
+            />
+          }
         />
 
         <Route
           path="*"
-          element={<Navigate to="/dashboard" replace />}
+          element={
+            <Navigate
+              to="/dashboard"
+              replace
+            />
+          }
         />
       </Routes>
     </BrowserRouter>
