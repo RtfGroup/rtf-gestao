@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   CircularProgress,
@@ -777,25 +778,42 @@ console.log('RTF ENGINE EXECUTADO')
             gap: 2,
           }}
         >
-          <TextField
-            select
-            fullWidth
-            label="Cliente"
-            value={cliente}
-            onChange={(event) =>
-              setCliente(event.target.value)
-            }
-          >
-            <MenuItem value={CONSUMIDOR_FINAL}>
-              Consumidor final
-            </MenuItem>
-
-            {clientes.map((item) => (
-              <MenuItem key={item.id} value={item.id}>
-                {item.nome}
-              </MenuItem>
-            ))}
-          </TextField>
+          <Autocomplete
+  fullWidth
+  options={[
+    {
+      id: CONSUMIDOR_FINAL,
+      nome: 'Consumidor final',
+    },
+    ...clientes,
+  ]}
+  value={
+    cliente === CONSUMIDOR_FINAL
+      ? {
+          id: CONSUMIDOR_FINAL,
+          nome: 'Consumidor final',
+        }
+      : clientes.find(
+          (item) => item.id === cliente,
+        ) ?? null
+  }
+  getOptionLabel={(option) => option.nome}
+  isOptionEqualToValue={(option, value) =>
+    option.id === value.id
+  }
+  onChange={(_, novoCliente) =>
+    setCliente(
+      novoCliente?.id ?? CONSUMIDOR_FINAL,
+    )
+  }
+  renderInput={(params) => (
+    <TextField
+      {...params}
+      label="Cliente"
+      placeholder="Digite para buscar..."
+    />
+  )}
+/>
 
           <TextField
             fullWidth
@@ -951,29 +969,32 @@ console.log('RTF ENGINE EXECUTADO')
               mb: 2,
             }}
           >
-            <TextField
-              select
-              size="small"
-              label="Produto"
-              value={item.produto}
-              onChange={(event) =>
-                selecionarProduto(
-                  item.id,
-                  event.target.value,
-                )
-              }
-            >
-              <MenuItem value="">Selecione</MenuItem>
-
-              {produtos.map((produto) => (
-                <MenuItem
-                  key={produto.id}
-                  value={produto.id}
-                >
-                  {produto.nome}
-                </MenuItem>
-              ))}
-            </TextField>
+            <Autocomplete
+  size="small"
+  options={produtos}
+  value={
+    produtos.find(
+      (produto) => produto.id === item.produto,
+    ) ?? null
+  }
+  getOptionLabel={(produto) => produto.nome}
+  isOptionEqualToValue={(option, value) =>
+    option.id === value.id
+  }
+  onChange={(_, novoProduto) =>
+    selecionarProduto(
+      item.id,
+      novoProduto?.id ?? '',
+    )
+  }
+  renderInput={(params) => (
+    <TextField
+      {...params}
+      label="Produto"
+      placeholder="Digite para buscar..."
+    />
+  )}
+/>
 
             <TextField
               size="small"

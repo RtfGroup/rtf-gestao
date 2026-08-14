@@ -522,7 +522,7 @@ const compra = await comprasService.registrarCompra({
         numero_compra: numeroCompra || undefined,
         numero_nota: numeroNota || undefined,
         data_compra: dataCompra,
-        gera_contas_pagar: false,
+        gera_contas_pagar: true,
         observacoes: observacoes || undefined,
         itens: itens.map((item) => ({
           produto_id: item.produto,

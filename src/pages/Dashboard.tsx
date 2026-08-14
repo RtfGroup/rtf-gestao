@@ -667,29 +667,7 @@ const pagoMes = (
   0,
 )
 
-      const saldoCaixa = (
-        resultadoFluxo.data ?? []
-      ).reduce((total, movimento) => {
-        const valor = Number(
-          movimento.valor ?? 0,
-        )
-
-        const tipo =
-          movimento.tipo?.toLowerCase()
-
-        if (tipo === 'entrada') {
-          return total + valor
-        }
-
-        if (
-          tipo === 'saida' ||
-          tipo === 'saída'
-        ) {
-          return total - valor
-        }
-
-        return total
-      }, 0)
+      const saldoCaixa = recebidoMes - pagoMes
 
       const produtosEstoque =
         resultadoEstoque.data?.length ?? 0

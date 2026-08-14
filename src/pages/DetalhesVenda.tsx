@@ -541,9 +541,15 @@ if (perfil?.empresa_id) {
         valor: venda.status_pagamento ?? '-',
       },
       {
-        titulo: 'QUANTIDADE DE ITENS',
-        valor: String(itens.length),
-      },
+  titulo: 'QUANTIDADE DE ITENS',
+  valor: String(
+    itens.reduce(
+      (total, item) =>
+        total + Number(item.quantidade || 0),
+      0,
+    ),
+  ),
+},
       {
         titulo: 'VALOR TOTAL',
         valor: formatarMoeda(venda.valor_total),
