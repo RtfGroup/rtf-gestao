@@ -3,6 +3,8 @@ export interface AnaliseFinanceiraIA {
     | 'RESUMO'
     | 'SAUDE'
     | 'RECOMENDACAO'
+    | 'MAIOR_PROBLEMA'
+    | 'PRIORIZAR_CONTAS'
 }
 export interface DadosAnaliseFinanceira
  {
@@ -43,10 +45,45 @@ export function interpretarAnaliseFinanceiraIA(
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+    .trim()
+
+    if (
+  comando.includes('quais contas devo priorizar') ||
+  comando.includes('qual conta devo priorizar') ||
+  comando.includes('qual conta pagar primeiro') ||
+  comando.includes('qual conta devo pagar primeiro') ||
+  comando.includes('priorizar contas')
+) {
+  return {
+    tipo: 'PRIORIZAR_CONTAS',
+  }
+}
+
+    if (
+  comando.includes('qual meu maior problema') ||
+  comando.includes('maior problema') ||
+  comando.includes('maiores problemas') ||
+  comando.includes('o que esta prejudicando meu caixa') ||
+  comando.includes('o que esta prejudicando a empresa') ||
+  comando.includes('onde estou perdendo dinheiro')
+) {
+  return {
+    tipo: 'MAIOR_PROBLEMA',
+  }
+}
 
   if (
     comando.includes('recomenda') ||
-    comando.includes('melhorar')
+    comando.includes('melhorar') ||
+    comando.includes('o que devo fazer') ||
+    comando.includes('o que fazer agora') ||
+    comando.includes('maior problema') ||
+    comando.includes('maiores problemas') ||
+    comando.includes('prejudicando') ||
+    comando.includes('priorizar') ||
+    comando.includes('pagar primeiro') ||
+    comando.includes('perdendo dinheiro') ||
+    comando.includes('melhorar meu caixa')
   ) {
     return {
       tipo: 'RECOMENDACAO',
@@ -55,7 +92,11 @@ export function interpretarAnaliseFinanceiraIA(
 
   if (
     comando.includes('saude financeira') ||
-    comando.includes('como esta a empresa')
+    comando.includes('como esta a empresa') ||
+    comando.includes('como esta meu negocio') ||
+    comando.includes('como esta o negocio') ||
+    comando.includes('situacao financeira') ||
+    comando.includes('como estao minhas financas')
   ) {
     return {
       tipo: 'SAUDE',
@@ -108,6 +149,69 @@ export function gerarRespostaAnaliseFinanceira(
       `Vendas do mês: ${formatarMoeda(dados.vendasMes)}`,
     ].join('\n')
   }
+
+if (analise.tipo === 'MAIOR_PROBLEMA') {
+  const recursosDisponiveis =
+    dados.saldoCaixa + dados.receber
+
+  const faltaParaCobrirContas =
+    dados.pagar - recursosDisponiveis
+
+  const comprasAcimaVendas =
+    (dados.comprasMes ?? 0) - dados.vendasMes
+
+  if (
+    dados.pagar > 0 &&
+    faltaParaCobrirContas > 0
+  ) {
+    const cobertura =
+      (recursosDisponiveis / dados.pagar) * 100
+
+    return [
+      '🚨 Principal problema financeiro identificado:',
+      '',
+      'Falta de cobertura para as contas a pagar.',
+      '',
+      `Você possui ${formatarMoeda(dados.saldoCaixa)} em caixa e ${formatarMoeda(dados.receber)} a receber.`,
+      `Isso representa ${formatarMoeda(recursosDisponiveis)} disponíveis contra ${formatarMoeda(dados.pagar)} em contas a pagar.`,
+      '',
+      `Hoje seus recursos cobrem apenas ${cobertura.toFixed(1)}% dos compromissos.`,
+      `Existe uma diferença de ${formatarMoeda(faltaParaCobrirContas)}.`,
+      '',
+      '🎯 Prioridade: preservar o caixa, acelerar cobranças e priorizar as contas com vencimento mais próximo.',
+    ].join('\n')
+  }
+
+  if (comprasAcimaVendas > 0) {
+    return [
+      '⚠️ Principal problema financeiro identificado:',
+      '',
+      'As compras estão maiores que as vendas.',
+      '',
+      `Compras do mês: ${formatarMoeda(dados.comprasMes ?? 0)}`,
+      `Vendas do mês: ${formatarMoeda(dados.vendasMes)}`,
+      `Diferença: ${formatarMoeda(comprasAcimaVendas)}`,
+      '',
+      '🎯 Prioridade: reduzir compras não essenciais e aumentar o giro dos produtos já adquiridos.',
+    ].join('\n')
+  }
+
+  if (dados.saldoCaixa < 0) {
+    return [
+      '🚨 Principal problema financeiro identificado:',
+      '',
+      `O caixa está negativo em ${formatarMoeda(Math.abs(dados.saldoCaixa))}.`,
+      '',
+      '🎯 Prioridade: interromper despesas não essenciais e reforçar as entradas de caixa.',
+    ].join('\n')
+  }
+
+  return [
+    '✅ Não identifiquei um problema financeiro crítico neste momento.',
+    '',
+    'Continue acompanhando caixa, contas a pagar, recebimentos, vendas e compras.',
+  ].join('\n')
+}
 
   const recomendacoes: string[] = []
 
@@ -287,11 +391,22 @@ if (clienteMaiorDevedor) {
   )
 }
 
-  return [
-    '💡 Recomendações financeiras.',
-    '',
-    ...recomendacoes.map(
-      (item, indice) => `${indice + 1}. ${item}`,
-    ),
-  ].join('\n')
+  const recomendacoesPrioritarias =
+  recomendacoes.slice(0, 5)
+
+return [
+  '🧠 RTF AI — Diagnóstico financeiro',
+  '',
+  recomendacoesPrioritarias.length > 0
+    ? 'Estes são os pontos que exigem mais atenção agora:'
+    : 'Não identifiquei problemas financeiros relevantes.',
+  '',
+  ...recomendacoesPrioritarias.map(
+    (item, indice) => `${indice + 1}. ${item}`,
+  ),
+  '',
+  recomendacoes.length > 5
+    ? `Analisei outros ${recomendacoes.length - 5} indicadores do negócio, mas priorizei os 5 mais importantes.`
+    : '',
+].filter(Boolean).join('\n')
 }

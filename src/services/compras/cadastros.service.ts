@@ -63,20 +63,21 @@ class CadastrosCompraService {
   }
 
   async listarProdutos() {
-    const empresaId = await this.obterEmpresaId()
+  const empresaId = await this.obterEmpresaId()
 
-    const { data, error } = await supabase
-      .from('produtos')
-      .select('id, nome, preco_custo')
-      .eq('empresa_id', empresaId)
-      .order('nome')
+  const { data, error } = await supabase
+    .from('produtos')
+    .select('id, nome, preco_custo')
+    .eq('empresa_id', empresaId)
+    .eq('ativo', true)
+    .order('nome')
 
-    if (error) {
-      throw new Error(error.message)
-    }
-
-    return data as ProdutoCompra[]
+  if (error) {
+    throw new Error(error.message)
   }
+
+  return data as ProdutoCompra[]
+}
 }
 
 export const cadastrosCompraService = new CadastrosCompraService()

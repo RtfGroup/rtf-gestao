@@ -22,7 +22,6 @@ import SaveIcon from '@mui/icons-material/Save'
 import MicIcon from '@mui/icons-material/Mic'
 
 import { supabase } from '../lib/supabase'
-import { executarAutomacao } from '../engine'
 
 import vendasService, {
   type Cliente,

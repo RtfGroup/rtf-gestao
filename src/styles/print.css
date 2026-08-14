@@ -1,41 +1,105 @@
 @media print {
-  body {
+  * {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+  html,
+  body,
+  #root {
     background: #ffffff !important;
-  }
-
-  aside,
-  nav,
-  header,
-  button {
-    display: none !important;
-  }
-
-  main {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
   }
 
-  .MuiBox-root {
-    max-width: 100% !important;
+  body * {
+    visibility: hidden !important;
+  }
+
+  .print-document,
+  .print-document * {
+    visibility: visible !important;
+  }
+
+  .print-document {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #ffffff !important;
+  color: #111827 !important;
+  font-size: 12px !important;
+  .print-company-header,
+.print-sale-data,
+.print-products,
+.print-observations,
+.print-footer {
+  margin-bottom: 10px !important;
+  padding: 14px !important;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+}
+
+  .no-print {
+    display: none !important;
   }
 
   .MuiPaper-root {
     box-shadow: none !important;
-    border: 1px solid #dddddd !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    border: 1px solid #d1d5db !important;
     break-inside: avoid;
   }
 
+  .print-company-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 24px !important;
+    padding: 20px !important;
+    margin-bottom: 16px !important;
+    border: 1.5px solid #111827 !important;
+  }
+
+  .print-company-header img {
+    width: 90px !important;
+    height: 90px !important;
+    object-fit: contain !important;
+  }
+
+  .MuiTypography-root {
+    color: #111827 !important;
+  }
+
   table {
+    width: 100% !important;
+    border-collapse: collapse !important;
     font-size: 11px !important;
+  }
+
+  th {
+    background: #f3f4f6 !important;
+    font-weight: 700 !important;
+  }
+
+  th,
+  td {
+    padding: 8px !important;
+    border-bottom: 1px solid #e5e7eb !important;
   }
 
   tr {
     break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   @page {
-    size: A4;
-    margin: 10mm;
-  }
+  size: A4 portrait;
+  margin: 8mm;
+}
 }

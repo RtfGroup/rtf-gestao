@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   CircularProgress,
@@ -41,6 +42,11 @@ interface ItemCompra {
 export default function NovaCompra() {
   const navigate = useNavigate()
 
+  const abrirLeitorAutomatico =
+  new URLSearchParams(window.location.search).get('lerNota') === '1'
+
+const inputNotaRef = useRef<HTMLInputElement | null>(null)
+
   const [fornecedores, setFornecedores] = useState<FornecedorCompra[]>([])
   const [produtos, setProdutos] = useState<ProdutoCompra[]>([])
 
@@ -55,8 +61,7 @@ export default function NovaCompra() {
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
   const [lendoNota, setLendoNota] = useState(false)
-const [fotosNota, setFotosNota] = useState<File[]>([])
-  const inputNotaRef = useRef<HTMLInputElement | null>(null)
+const [, setFotosNota] = useState<File[]>([])
 
   const [itens, setItens] = useState<ItemCompra[]>([
     {
@@ -70,6 +75,20 @@ const [fotosNota, setFotosNota] = useState<File[]>([])
 useEffect(() => {
   carregarCadastros()
 }, [])
+
+useEffect(() => {
+  if (!abrirLeitorAutomatico) {
+    return
+  }
+
+  const timer = window.setTimeout(() => {
+    inputNotaRef.current?.click()
+  }, 400)
+
+  return () => {
+    window.clearTimeout(timer)
+  }
+}, [abrirLeitorAutomatico])
 
   async function carregarCadastros() {
     try {
@@ -189,6 +208,45 @@ useEffect(() => {
     }).format(valor)
   }
 
+async function obterCategoriaAutomatica() {
+  const empresaId = await obterEmpresaId()
+
+  const { data: categoriaExistente, error: erroBusca } =
+    await supabase
+      .from('categorias')
+      .select('id')
+      .eq('empresa_id', empresaId)
+      .eq('nome', 'Compras Automáticas')
+      .maybeSingle()
+
+  if (erroBusca) {
+    throw erroBusca
+  }
+
+  if (categoriaExistente?.id) {
+    return categoriaExistente.id
+  }
+
+  const { data: novaCategoria, error: erroCriacao } =
+    await supabase
+      .from('categorias')
+      .insert({
+        empresa_id: empresaId,
+        nome: 'Compras Automáticas',
+        descricao:
+          'Produtos cadastrados automaticamente através da leitura de notas fiscais.',
+        ativo: true,
+      })
+      .select('id')
+      .single()
+
+  if (erroCriacao) {
+    throw erroCriacao
+  }
+
+  return novaCategoria.id
+}
+
 function normalizarNome(texto: string) {
   return texto
     .normalize('NFD')
@@ -201,6 +259,7 @@ async function lerNotaFiscal(arquivo: File) {
 setLendoNota(true)
 
 try {
+  let categoriaAutomaticaId: string | null = null
   const formData = new FormData()
   formData.append('imagem', arquivo)
 
@@ -309,7 +368,7 @@ if (nota.fornecedor) {
 
 if (nota.itens?.length) {
   const novosItens: ItemCompra[] = []
-  const produtosDisponiveis = [...produtos]
+  const produtosDisponiveis = await cadastrosCompraService.listarProdutos()
 
   for (const [indice, item] of nota.itens.entries()) {
     const nomeItem = normalizarNome(item.nome ?? '')
@@ -320,10 +379,15 @@ if (nota.itens?.length) {
     )
 
     if (!produtoEncontrado && item.nome) {
+  if (!categoriaAutomaticaId) {
+    categoriaAutomaticaId =
+      await obterCategoriaAutomatica()
+  }
+      
       const novoProduto = await criarProduto({
         nome: item.nome,
         descricao: '',
-        categoria_id: '',
+        categoria_id: categoriaAutomaticaId!,
         codigo: '',
         codigo_barras: '',
         tipo: 'produto',
@@ -370,22 +434,33 @@ if (nota.itens?.length) {
   }
 
   setProdutos(produtosDisponiveis)
-  setItens((anteriores) => {
-  const lista = [...anteriores]
 
-  for (const novo of novosItens) {
-    const existente = lista.find(
-  (item) => item.produto === novo.produto,
-)
+setItens((itensAtuais) => {
+  if (novosItens.length === 0) {
+    return itensAtuais
+  }
+
+  const itensValidos = itensAtuais.filter(
+    (item) => item.produto !== '',
+  )
+
+  const itensCombinados = [...itensValidos]
+
+  for (const novoItem of novosItens) {
+    const existente = itensCombinados.find(
+      (item) => item.produto === novoItem.produto,
+    )
 
     if (existente) {
-      existente.quantidade += novo.quantidade
+      existente.quantidade += novoItem.quantidade
+      existente.valorUnitario =
+        novoItem.valorUnitario
     } else {
-      lista.push(novo)
+      itensCombinados.push(novoItem)
     }
   }
 
-  return lista
+  return itensCombinados
 })
 }
 } catch (error) {
@@ -433,7 +508,7 @@ const compra = await comprasService.registrarCompra({
         numero_compra: numeroCompra || undefined,
         numero_nota: numeroNota || undefined,
         data_compra: dataCompra,
-        gera_contas_pagar: true,
+        gera_contas_pagar: false,
         observacoes: observacoes || undefined,
         itens: itens.map((item) => ({
           produto_id: item.produto,
@@ -580,12 +655,14 @@ return (
   component="label"
   variant="outlined"
   color="secondary"
+  autoFocus={abrirLeitorAutomatico}
   startIcon={<PhotoCameraIcon />}
   disabled={lendoNota}
 >
   {lendoNota ? 'Lendo Nota...' : 'Ler Nota Fiscal'}
 
   <input
+  ref={inputNotaRef}
   type="file"
   accept="image/*"
   multiple
@@ -659,24 +736,31 @@ onChange={async (event) => {
               mb: 2,
             }}
           >
-            <TextField
-              select
-              size="small"
-              value={item.produto}
-              onChange={(event) =>
-                selecionarProduto(item.id, event.target.value)
-              }
-            >
-              <MenuItem value="">
-                Selecione
-              </MenuItem>
-
-              {produtos.map((produto) => (
-                <MenuItem key={produto.id} value={produto.id}>
-                  {produto.nome}
-                </MenuItem>
-              ))}
-            </TextField>
+            <Autocomplete
+  size="small"
+  options={produtos}
+  getOptionLabel={(option) => option.nome}
+  value={
+    produtos.find(
+      (produto) => produto.id === item.produto,
+    ) ?? null
+  }
+  onChange={(_, novoProduto) => {
+    selecionarProduto(
+      item.id,
+      novoProduto?.id ?? '',
+    )
+  }}
+  isOptionEqualToValue={(option, value) =>
+    option.id === value.id
+  }
+  renderInput={(params) => (
+    <TextField
+      {...params}
+      placeholder="Selecione ou pesquise"
+    />
+  )}
+/>
 
             <TextField
               size="small"

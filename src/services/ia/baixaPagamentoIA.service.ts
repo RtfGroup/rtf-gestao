@@ -13,6 +13,7 @@ function normalizar(texto: string) {
 export async function localizarContaPagar(
   empresaId: string,
   fornecedor: string,
+  valorPagamento?: number,
 ) {
   const { data: contas, error: erroContas } =
     await supabase
@@ -75,17 +76,33 @@ export async function localizarContaPagar(
     return null
   }
 
-  const contaEncontrada =
-    (contas ?? [])
-      .filter(
+  const contasDoFornecedor =
+  (contas ?? [])
+    .filter(
+      (conta) =>
+        conta.fornecedor_id === fornecedorEncontrado.id,
+    )
+    .map((conta) => ({
+      ...conta,
+      saldo_pendente: Math.max(
+        Number(conta.valor_original ?? 0) -
+          Number(conta.valor_pago ?? 0),
+        0,
+      ),
+    }))
+    .sort(
+      (a, b) =>
+        new Date(a.data_vencimento).getTime() -
+        new Date(b.data_vencimento).getTime(),
+    )
+
+const contaEncontrada =
+  valorPagamento && valorPagamento > 0
+    ? contasDoFornecedor.find(
         (conta) =>
-          conta.fornecedor_id === fornecedorEncontrado.id,
-      )
-      .sort(
-        (a, b) =>
-          new Date(a.data_vencimento).getTime() -
-          new Date(b.data_vencimento).getTime(),
-      )[0] ?? null
+          conta.saldo_pendente >= valorPagamento,
+      ) ?? null
+    : contasDoFornecedor[0] ?? null
 
   if (!contaEncontrada) {
     return null

@@ -124,11 +124,16 @@ export function interpretarPedidoIA({
   const tipoVenda = identificarTipoVenda(textoNormalizado)
 
   const formaPagamentoEncontrada =
-    formasPagamento.find((forma) =>
-      textoNormalizado.includes(
-        normalizarTexto(forma.nome),
-      ),
-    ) ?? formasPagamento[0]
+  tipoVenda === 'FIADO'
+    ? formasPagamento.find(
+        (forma) =>
+          normalizarTexto(forma.nome) === 'fiado',
+      )
+    : formasPagamento.find((forma) =>
+        textoNormalizado.includes(
+          normalizarTexto(forma.nome),
+        ),
+      ) ?? formasPagamento[0]
 
   if (!formaPagamentoEncontrada) {
     throw new Error(
@@ -161,6 +166,34 @@ export function interpretarPedidoIA({
       )
 
     if (!apelidoEncontrado) {
+  return
+}
+
+const nomeProduto =
+  normalizarTexto(produto.nome)
+
+const existeProdutoMaisEspecifico =
+  produtos.some((outroProduto) => {
+    if (outroProduto.id === produto.id) {
+      return false
+    }
+
+    const outroNome =
+      normalizarTexto(outroProduto.nome)
+
+    return (
+      outroNome.length > nomeProduto.length &&
+      textoNormalizado.includes(outroNome) &&
+      (
+        outroNome.includes(nomeProduto) ||
+        outroNome.includes(
+          normalizarTexto(apelidoEncontrado),
+        )
+      )
+    )
+  })
+
+if (existeProdutoMaisEspecifico) {
   return
 }
 

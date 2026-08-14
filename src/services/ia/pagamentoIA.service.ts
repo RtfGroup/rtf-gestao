@@ -37,8 +37,9 @@ export function interpretarPagamentoIA(
     .replace(/baixar\s+pagamento\s+(?:da|do|de)\s+/gi, '')
     .replace(/baixar\s+pagamento/gi, '')
     .replace(/\bpaguei\s+(?:a\s+)?conta\s+(?:da|do|de)\s+/gi, '')
-    .replace(/\bpaguei\s+(?:para|ao|à|a)\s+/gi, '')
-    .replace(/\bpaguei\b/gi, '')
+    .replace(/\bpaguei\s+(?:a\s+conta\s+)?(?:para|ao|à|a|do|da|de)\s+/gi, '')
+.replace(/\bpaguei\b/gi, '')
+.replace(/^\s*para\s+/gi, '')
     .replace(/\bpagar\s+fornecedor\s+/gi, '')
     .replace(/\bpagar\s+conta\s+(?:da|do|de)\s+/gi, '')
     .replace(/\bpagar\s+conta\b/gi, '')
@@ -56,6 +57,25 @@ export function interpretarPagamentoIA(
     .replace(/\s+/g, ' ')
     .replace(/[.,;:]+$/g, '')
     .trim()
+
+    const fornecedorNormalizado = fornecedor
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim()
+
+const fornecedorGenerico =
+  fornecedorNormalizado === '' ||
+  fornecedorNormalizado === 'fornecedor' ||
+  fornecedorNormalizado === 'um fornecedor' ||
+  fornecedorNormalizado === 'para um fornecedor' ||
+  fornecedorNormalizado === 'reais para um fornecedor'
+
+if (fornecedorGenerico) {
+  throw new Error(
+    'Informe qual fornecedor deseja pagar.',
+  )
+}
 
   const referencia =
     texto.match(/referente\s+(.+)/i)?.[1]?.trim() ?? ''

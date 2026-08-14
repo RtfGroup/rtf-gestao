@@ -37,6 +37,15 @@ export default function NotificationBell() {
   ).length
 
 useEffect(() => {
+  if (
+    'Notification' in window &&
+    Notification.permission === 'default'
+  ) {
+    void Notification.requestPermission()
+  }
+}, [])
+  
+useEffect(() => {
   void carregarNotificacoes()
 
   const canal = supabase
@@ -44,13 +53,25 @@ useEffect(() => {
     .on(
       'postgres_changes',
       {
-        event: '*',
+        event: 'INSERT',
         schema: 'public',
         table: 'notificacoes',
       },
-      () => {
-        void carregarNotificacoes()
-      },
+      (payload) => {
+  void carregarNotificacoes()
+
+  const nova = payload.new as Partial<Notificacao>
+
+  if (
+    'Notification' in window &&
+    Notification.permission === 'granted' &&
+    nova.titulo
+  ) {
+    new Notification(nova.titulo, {
+      body: nova.mensagem ?? 'Nova notificação no RTF Gestão.',
+    })
+  }
+},
     )
     .subscribe()
 
@@ -74,6 +95,7 @@ useEffect(() => {
           lida,
           criada_em
         `)
+        .eq('lida', false)
         .order('criada_em', { ascending: false })
         .limit(20)
 
@@ -108,25 +130,27 @@ useEffect(() => {
     }
 
     setNotificacoes((atuais) =>
-      atuais.map((item) =>
-        item.id === notificacao.id
-          ? {
-              ...item,
-              lida: true,
-            }
-          : item,
-      ),
-    )
+  atuais.filter(
+    (item) => item.id !== notificacao.id,
+  ),
+)
   }
 
   return (
     <>
       <IconButton
-        onClick={(event) => {
-          setAncora(event.currentTarget)
-          void carregarNotificacoes()
-        }}
-      >
+  onClick={(event) => {
+    setAncora(event.currentTarget)
+    void carregarNotificacoes()
+  }}
+  sx={{
+    color: '#f8fafc',
+
+    '&:hover': {
+      backgroundColor: 'rgba(255,255,255,0.06)',
+    },
+  }}
+>
         <Badge
           badgeContent={quantidadeNaoLidas}
           color="error"

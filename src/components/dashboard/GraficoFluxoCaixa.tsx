@@ -105,7 +105,7 @@ export default function GraficoFluxoCaixa({
               fontSize: '0.82rem',
             }}
           >
-            Entradas e saídas dos últimos 7 dias
+            Entradas e saídas no período selecionado
           </Typography>
         </Box>
       </Box>

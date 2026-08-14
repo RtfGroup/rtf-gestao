@@ -4,13 +4,12 @@ import {
   Alert,
   Box,
   CircularProgress,
-  TextField,
-  MenuItem,
   Paper,
   Typography,
 } from '@mui/material'
 
 import ResumoCard from '../components/dashboard/ResumoCard'
+import { usePeriodoDashboard } from '../contexts/PeriodoDashboardContext'
 
 import UltimasCompras, {
   type UltimaCompra,
@@ -24,7 +23,6 @@ import EstoqueBaixo, {
   type ProdutoEstoqueBaixo,
 } from '../components/dashboard/EstoqueBaixo'
 
-import CabecalhoDashboard from '../components/dashboard/CabecalhoDashboard'
 import GraficoFaturamento, {
   type DadoFaturamento,
 } from '../components/dashboard/GraficoFaturamento'
@@ -119,13 +117,10 @@ const [graficoFaturamento, setGraficoFaturamento] =
 
   const [erro, setErro] = useState('')
 
-  const agora = new Date()
-
-const [mesSelecionado, setMesSelecionado] =
-  useState(agora.getMonth())
-
-const [anoSelecionado, setAnoSelecionado] =
-  useState(agora.getFullYear())
+  const {
+  mesSelecionado,
+  anoSelecionado,
+} = usePeriodoDashboard()
 
   const [insights, setInsights] =
   useState<Insight[]>([])
@@ -373,7 +368,15 @@ supabase
 supabase
   .from('fluxo_caixa')
   .select('*')
-  .eq('empresa_id', empresaId),
+  .eq('empresa_id', empresaId)
+  .gte(
+    'data_movimento',
+    inicioMes.toISOString(),
+  )
+  .lt(
+    'data_movimento',
+    inicioProximoMes.toISOString(),
+  ),
 
         supabase
           .from('estoque')
@@ -449,16 +452,18 @@ supabase
           .eq('empresa_id', empresaId),
 
         supabase
-          .from('vendas')
-          .select('data_venda, valor_total')
-          .eq('empresa_id', empresaId)
-          .gte(
-            'data_venda',
-            new Date(
-              Date.now() - 6 * 24 * 60 * 60 * 1000,
-            ).toISOString(),
-          )
-          .neq('status', 'cancelada'),
+  .from('vendas')
+  .select('data_venda, valor_total')
+  .eq('empresa_id', empresaId)
+  .gte(
+    'data_venda',
+    inicioMes.toISOString(),
+  )
+  .lt(
+    'data_venda',
+    inicioProximoMes.toISOString(),
+  )
+  .neq('status', 'cancelada'),
 
 supabase
   .from('itens_venda')
@@ -1113,15 +1118,6 @@ background:
     },
   }}
 >
-  <Box
-    sx={{
-      position: 'relative',
-      zIndex: 1,
-      minWidth: 0,
-    }}
-  >
-    <CabecalhoDashboard />
-  </Box>
 
   <Box
     sx={{
@@ -1168,74 +1164,9 @@ background:
       },
     }}
   >
-    <TextField
-      select
-      label="Mês"
-      value={mesSelecionado}
-      onChange={(e) =>
-        setMesSelecionado(
-          Number(e.target.value),
-        )
-      }
-      sx={{
-        width: {
-          xs: '100%',
-          sm: 150,
-        },
-      }}
-    >
-      {[
-        'Janeiro',
-        'Fevereiro',
-        'Março',
-        'Abril',
-        'Maio',
-        'Junho',
-        'Julho',
-        'Agosto',
-        'Setembro',
-        'Outubro',
-        'Novembro',
-        'Dezembro',
-      ].map((mes, index) => (
-        <MenuItem
-          key={mes}
-          value={index}
-        >
-          {mes}
-        </MenuItem>
-      ))}
-    </TextField>
 
-    <TextField
-      select
-      label="Ano"
-      value={anoSelecionado}
-      onChange={(e) =>
-        setAnoSelecionado(
-          Number(e.target.value),
-        )
-      }
-      sx={{
-        width: {
-          xs: '100%',
-          sm: 120,
-        },
-      }}
-    >
-      {[2025, 2026, 2027, 2028].map(
-        (ano) => (
-          <MenuItem
-            key={ano}
-            value={ano}
-          >
-            {ano}
-          </MenuItem>
-        ),
-      )}
-    </TextField>
   </Box>
-</Box>
+</Box>  
 
 {/* INDICADORES */}
 <Box

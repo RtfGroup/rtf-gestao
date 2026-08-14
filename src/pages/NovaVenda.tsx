@@ -346,24 +346,39 @@ console.log(texto)
 console.log('==============================')
 
     if (texto.includes('fiado')) {
-      setTipoVenda('FIADO')
-    } else if (texto.includes('delivery')) {
-      setTipoVenda('DELIVERY')
-    } else if (texto.includes('whatsapp')) {
-      setTipoVenda('WHATSAPP')
-    } else if (
-      texto.includes('balcao') ||
-      texto.includes('retirada')
-    ) {
-      setTipoVenda('BALCAO')
-    }
+  setTipoVenda('FIADO')
 
-    const pagamentoEncontrado =
-      formasPagamento.find((forma) =>
-        texto.includes(
-          normalizarTexto(forma.nome),
-        ),
-      )
+  const formaFiado = formasPagamento.find(
+    (forma) =>
+      normalizarTexto(forma.nome) === 'fiado'
+  )
+
+  if (formaFiado) {
+    setFormaPagamento(formaFiado.id)
+  }
+} else if (texto.includes('delivery')) {
+  setTipoVenda('DELIVERY')
+} else if (texto.includes('whatsapp')) {
+  setTipoVenda('WHATSAPP')
+} else if (
+  texto.includes('balcao') ||
+  texto.includes('retirada')
+) {
+  setTipoVenda('BALCAO')
+}
+
+const pagamentoEncontrado =
+  formasPagamento.find((forma) =>
+    texto.includes(
+      normalizarTexto(forma.nome),
+    ),
+  )
+
+if (pagamentoEncontrado) {
+  setFormaPagamento(
+    pagamentoEncontrado.id,
+  )
+}
 
     if (pagamentoEncontrado) {
       setFormaPagamento(
@@ -371,23 +386,25 @@ console.log('==============================')
       )
     }
 
-    const trechoCliente =
-      texto.match(
-        /cliente\s+([^,.;]+)/,
-      )?.[1]
+    const clientesOrdenados = [...clientes].sort(
+  (a, b) =>
+    normalizarTexto(b.nome).length -
+    normalizarTexto(a.nome).length,
+)
 
-    if (trechoCliente) {
-      const clienteEncontrado =
-        clientes.find((item) =>
-          trechoCliente.includes(
-            normalizarTexto(item.nome),
-          ),
-        )
+const clienteEncontrado =
+  clientesOrdenados.find((item) => {
+    const nomeCliente = normalizarTexto(item.nome)
 
-      if (clienteEncontrado) {
-        setCliente(clienteEncontrado.id)
-      }
-    }
+    return (
+      nomeCliente.length >= 3 &&
+      texto.includes(nomeCliente)
+    )
+  })
+
+if (clienteEncontrado) {
+  setCliente(clienteEncontrado.id)
+}
 
     const itensEncontrados: ItemVendaTela[] =
       []
@@ -508,6 +525,31 @@ const aliasEncontrado =
       if (!aliasEncontrado) {
         return
       }
+
+const existeProdutoMaisEspecifico =
+  produtos.some((outroProduto) => {
+    if (outroProduto.id === produto.id) {
+      return false
+    }
+
+    const outroNome =
+      normalizarTexto(outroProduto.nome)
+
+    return (
+      outroNome.length > nomeProduto.length &&
+      texto.includes(outroNome) &&
+      (
+        outroNome.includes(nomeProduto) ||
+        outroNome.includes(
+          normalizarTexto(aliasEncontrado),
+        )
+      )
+    )
+  })
+
+if (existeProdutoMaisEspecifico) {
+  return
+}
 
 const regexQuantidadeAntes =
   new RegExp(

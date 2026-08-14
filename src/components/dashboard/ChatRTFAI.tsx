@@ -470,6 +470,7 @@ setRecebimentoPendente({
 const conta = await localizarContaPagar(
   empresaId,
   pagamento.fornecedor,
+  pagamento.valor,
 )
 
 if (!conta) {
@@ -516,9 +517,472 @@ setResposta(
     .filter(Boolean)
     .join('\n'),
 )
+
+
+  const clientesEmAberto =
+    resumoDashboard.clientesEmAberto ?? []
+
+  if (clientesEmAberto.length === 0) {
+    setResposta(
+      '✅ Não existem clientes com valores em aberto para cobrar.',
+    )
+  } else {
+    const clientesAgrupados = Object.values(
+      clientesEmAberto.reduce(
+        (
+          acumulador: Record<
+            string,
+            {
+              nome: string
+              saldo: number
+            }
+          >,
+          cliente,
+        ) => {
+          const chave = cliente.nome
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim()
+
+          if (!acumulador[chave]) {
+            acumulador[chave] = {
+              nome: cliente.nome,
+              saldo: 0,
+            }
+          }
+
+          acumulador[chave].saldo += cliente.saldo
+
+          return acumulador
+        },
+        {},
+      ),
+    )
+
+    const clientesOrdenados =
+      clientesAgrupados.sort(
+        (a, b) => b.saldo - a.saldo,
+      )
+
+    const principal = clientesOrdenados[0]
+
+    setResposta(
+      [
+        '🎯 Cobrança prioritária:',
+        '',
+        `${principal.nome} — ${formatarMoeda(
+          principal.saldo,
+        )}`,
+        '',
+        'Esse cliente deve ser priorizado por ter o maior valor em aberto.',
+        '',
+        clientesOrdenados.length > 1
+          ? `Próximo da lista: ${clientesOrdenados[1].nome} — ${formatarMoeda(
+              clientesOrdenados[1].saldo,
+            )}`
+          : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    )
+  }
+
+  } else if (tipoComando === 'RECEBER_E_DEVEDORES') {
+  const clientesEmAberto =
+    resumoDashboard.clientesEmAberto ?? []
+
+  const clientesAgrupados = Object.values(
+    clientesEmAberto.reduce(
+      (
+        acumulador: Record<
+          string,
+          {
+            nome: string
+            saldo: number
+          }
+        >,
+        cliente,
+      ) => {
+        const chave = cliente.nome
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .trim()
+
+        if (!acumulador[chave]) {
+          acumulador[chave] = {
+            nome: cliente.nome,
+            saldo: 0,
+          }
+        }
+
+        acumulador[chave].saldo += cliente.saldo
+
+        return acumulador
+      },
+      {},
+    ),
+  )
+
+  const clientesOrdenados =
+    clientesAgrupados.sort(
+      (a, b) => b.saldo - a.saldo,
+    )
+
+  const linhas = clientesOrdenados.map(
+    (cliente, indice) =>
+      `${indice + 1}. ${cliente.nome} — ${formatarMoeda(
+        cliente.saldo,
+      )}`,
+  )
+
+  setResposta(
+    [
+      `💵 Total a receber: ${formatarMoeda(
+        resumoDashboard.receber,
+      )}`,
+      '',
+      '💳 Clientes com valores em aberto:',
+      '',
+      ...linhas,
+      '',
+      clientesOrdenados.length > 0
+        ? `⚠️ Maior devedor: ${clientesOrdenados[0].nome} — ${formatarMoeda(
+            clientesOrdenados[0].saldo,
+          )}`
+        : '✅ Nenhum cliente possui valor em aberto.',
+    ].join('\n'),
+  )
+
+} else if (tipoComando === 'DEVEDORES') {
+
+  const clientesEmAberto =
+    resumoDashboard.clientesEmAberto ?? []
+
+  if (clientesEmAberto.length === 0) {
+    setResposta(
+      '✅ Não existem clientes com valores em aberto no momento.',
+    )
+  } else {
+    const clientesAgrupados = Object.values(
+  clientesEmAberto.reduce(
+    (
+      acumulador: Record<
+        string,
+        {
+          nome: string
+          saldo: number
+        }
+      >,
+      cliente,
+    ) => {
+      const chave = cliente.nome
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim()
+
+      if (!acumulador[chave]) {
+        acumulador[chave] = {
+          nome: cliente.nome,
+          saldo: 0,
+        }
+      }
+
+      acumulador[chave].saldo += cliente.saldo
+
+      return acumulador
+    },
+    {},
+  ),
+)
+
+const clientesOrdenados =
+  clientesAgrupados.sort(
+    (a, b) => b.saldo - a.saldo,
+  )
+
+    const totalAberto = clientesOrdenados.reduce(
+      (total, cliente) => total + cliente.saldo,
+      0,
+    )
+
+    const linhas = clientesOrdenados.map(
+      (cliente, indice) =>
+        `${indice + 1}. ${cliente.nome} — ${formatarMoeda(
+          cliente.saldo,
+        )}`,
+    )
+
+    setResposta(
+      [
+        '💳 Clientes com valores em aberto:',
+        '',
+        ...linhas,
+        '',
+        `Total a receber: ${formatarMoeda(totalAberto)}`,
+        '',
+        `⚠️ Maior devedor: ${clientesOrdenados[0].nome} — ${formatarMoeda(
+          clientesOrdenados[0].saldo,
+        )}`,
+      ].join('\n'),
+    )
+  }
+
+    setMensagem('')
+  return
+
+  } else if (
+  tipoComando === 'MAIOR_PROBLEMA_E_PRIORIDADES'
+) {
+  const analiseMaiorProblema =
+    interpretarAnaliseFinanceiraIA(
+      'qual meu maior problema',
+    )
+
+  const respostaMaiorProblema =
+    gerarRespostaAnaliseFinanceira(
+      analiseMaiorProblema,
+      resumoDashboard,
+      formatarMoeda,
+    )
+
+  const prioridades: string[] = []
+
+  if (resumoDashboard.pagar > 0) {
+    prioridades.push(
+      `💸 Revise as contas a pagar. Existem ${formatarMoeda(
+        resumoDashboard.pagar,
+      )} em compromissos pendentes.`,
+    )
+  }
+
+  if (resumoDashboard.receber > 0) {
+    prioridades.push(
+      `💳 Faça cobranças hoje. Existem ${formatarMoeda(
+        resumoDashboard.receber,
+      )} a receber.`,
+    )
+  }
+
+  if (
+    resumoDashboard.saldoCaixa <
+    resumoDashboard.pagar
+  ) {
+    prioridades.push(
+      `⚠️ Preserve o caixa. Você possui ${formatarMoeda(
+        resumoDashboard.saldoCaixa,
+      )} disponível e as contas a pagar estão acima desse valor.`,
+    )
+  }
+
+  setResposta(
+    [
+      respostaMaiorProblema,
+      '',
+      '🎯 O que fazer hoje:',
+      '',
+      ...prioridades
+        .slice(0, 3)
+        .map(
+          (prioridade, indice) =>
+            `${indice + 1}. ${prioridade}`,
+        ),
+    ].join('\n'),
+  )
+
+  } else if (tipoComando === 'PRIORIDADES_HOJE') {
+  const prioridades: string[] = []
+
+  if (resumoDashboard.pagar > 0) {
+    prioridades.push(
+      `💸 Revise as contas a pagar. Existem ${formatarMoeda(
+        resumoDashboard.pagar,
+      )} em compromissos pendentes.`,
+    )
+  }
+
+  if (resumoDashboard.receber > 0) {
+    prioridades.push(
+      `💳 Faça cobranças hoje. Existem ${formatarMoeda(
+        resumoDashboard.receber,
+      )} a receber.`,
+    )
+  }
+
+  if (
+    resumoDashboard.saldoCaixa <
+    resumoDashboard.pagar
+  ) {
+    prioridades.push(
+      `⚠️ Preserve o caixa. Você possui ${formatarMoeda(
+        resumoDashboard.saldoCaixa,
+      )} disponível e as contas a pagar estão acima desse valor.`,
+    )
+  }
+
+  if (prioridades.length === 0) {
+    prioridades.push(
+      '✅ Não há nenhuma urgência financeira identificada hoje.',
+    )
+  }
+
+  setResposta(
+    [
+      '🎯 Suas prioridades de hoje:',
+      '',
+      ...prioridades
+        .slice(0, 3)
+        .map(
+          (prioridade, indice) =>
+            `${indice + 1}. ${prioridade}`,
+        ),
+    ].join('\n'),
+  )
+
 } else if (tipoComando === 'ANALISE') {
   const analise = interpretarAnaliseFinanceiraIA(texto)
 
+if (analise.tipo === 'PRIORIZAR_CONTAS') {
+  const { data: contasPrioridade, error: erroContas } =
+  await supabase
+    .from('contas_pagar')
+    .select(`
+      id,
+      fornecedor_id,
+      descricao,
+      valor_original,
+      valor_pago,
+      data_vencimento,
+      status
+    `)
+    .eq('empresa_id', empresaId)
+    .neq('status', 'PAGO')
+    .order('data_vencimento', {
+  ascending: true,
+})
+.limit(20)
+
+if (erroContas) {
+  throw erroContas
+}
+
+const contas = contasPrioridade ?? []
+
+const hoje = new Date()
+hoje.setHours(0, 0, 0, 0)
+
+const contasOrdenadas = [...contas]
+  .map((conta) => {
+    const saldo =
+      Number(conta.valor_original ?? 0) -
+      Number(conta.valor_pago ?? 0)
+
+    const dataVencimento = conta.data_vencimento
+      ? new Date(`${conta.data_vencimento}T00:00:00`)
+      : null
+
+    const vencida =
+      dataVencimento !== null &&
+      dataVencimento < hoje
+
+    return {
+      ...conta,
+      saldo,
+      dataVencimento,
+      vencida,
+    }
+  })
+  .sort((a, b) => {
+    if (a.vencida !== b.vencida) {
+      return a.vencida ? -1 : 1
+    }
+
+    if (a.vencida && b.vencida) {
+      return b.saldo - a.saldo
+    }
+
+    const dataA =
+      a.dataVencimento?.getTime() ??
+      Number.MAX_SAFE_INTEGER
+
+    const dataB =
+      b.dataVencimento?.getTime() ??
+      Number.MAX_SAFE_INTEGER
+
+    return dataA - dataB
+  })
+  .slice(0, 5)
+
+const idsFornecedores = [
+  ...new Set(
+    contas
+      .map((conta) => conta.fornecedor_id)
+      .filter(Boolean),
+  ),
+]
+
+let fornecedoresBanco: {
+  id: string
+  nome_fantasia: string | null
+  razao_social: string | null
+}[] = []
+
+if (idsFornecedores.length > 0) {
+  const { data, error } = await supabase
+    .from('fornecedores')
+    .select('id,nome_fantasia,razao_social')
+    .in('id', idsFornecedores)
+
+  if (error) {
+    throw error
+  }
+
+  fornecedoresBanco = data ?? []
+}
+
+if (contas.length === 0) {
+  setResposta(
+    '✅ Não existem contas a pagar pendentes no momento.',
+  )
+} else {
+  const linhas = contasOrdenadas.map((conta, indice) => {
+    const fornecedor = fornecedoresBanco.find(
+      (item) => item.id === conta.fornecedor_id,
+    )
+
+    const nomeFornecedor =
+  fornecedor?.nome_fantasia ||
+  fornecedor?.razao_social ||
+  'Fornecedor não informado'
+
+const descricaoConta =
+  conta.descricao ||
+  'Conta sem descrição'
+
+    const saldo =
+      Number(conta.valor_original ?? 0) -
+      Number(conta.valor_pago ?? 0)
+
+    return `${indice + 1}. ${nomeFornecedor}
+   ${descricaoConta}
+   ${formatarMoeda(saldo)} — vence em ${
+     conta.data_vencimento ?? 'data não informada'
+   }`
+  })
+
+  setResposta(
+    [
+      '📌 Contas que devem ser priorizadas:',
+      '',
+      ...linhas,
+      '',
+      '🎯 Prioridade: contas vencidas primeiro, considerando também o maior impacto financeiro.',
+    ].join('\n'),
+  )
+}
+} else {
   const respostaAnalise =
     gerarRespostaAnaliseFinanceira(
       analise,
@@ -527,6 +991,7 @@ setResposta(
     )
 
   setResposta(respostaAnalise)
+}
 
 } else {
   setResposta('Ainda não aprendi esse comando.')
@@ -769,7 +1234,7 @@ if (!produtoEncontrado) {
       fornecedor_id: fornecedorEncontrado.id,
       numero_compra: numeroCompra ?? undefined,
       data_compra: new Date().toISOString().split('T')[0],
-      gera_contas_pagar: true,
+      gera_contas_pagar: false,
       observacoes: 'Compra registrada pela RTF AI',
       itens: itensCompra,
     })
@@ -1151,6 +1616,32 @@ flexShrink: 0,
           gap: 2,
         }}
       >
+
+<Button
+  variant="outlined"
+  onClick={() => {
+  window.location.href = '/compras/nova?lerNota=1'
+}}
+  sx={{
+    height: 54,
+    minWidth: 130,
+    px: 2,
+    borderRadius: '12px',
+    borderColor: 'rgba(212,175,55,0.55)',
+    color: '#d4af37',
+    fontWeight: 800,
+    textTransform: 'none',
+    whiteSpace: 'nowrap',
+
+    '&:hover': {
+      borderColor: '#d4af37',
+      backgroundColor: 'rgba(212,175,55,0.08)',
+    },
+  }}
+>
+  📷 Ler Nota
+</Button>
+
         <TextField
   fullWidth
   placeholder="Ex.: Vendi 2 Marmitex G e 1 Coca no Pix"

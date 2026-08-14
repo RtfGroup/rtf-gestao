@@ -13,6 +13,7 @@ import { supabase } from './lib/supabase'
 import MainLayout from './layouts/MainLayout'
 
 import Dashboard from './pages/Dashboard'
+import { PeriodoDashboardProvider } from './contexts/PeriodoDashboardContext'
 import Produtos from './pages/Produtos'
 import Categorias from './pages/Categorias'
 import Compras from './pages/Compras'
@@ -82,9 +83,49 @@ function RotaProtegida() {
   return <Outlet />
 }
 
+function RotaAdmin() {
+  const [carregando, setCarregando] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    async function verificarAdmin() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        setCarregando(false)
+        return
+      }
+
+      const { data } = await supabase
+        .from('usuarios')
+        .select('perfil')
+        .eq('id', user.id)
+        .single()
+
+      setIsAdmin(data?.perfil === 'admin')
+      setCarregando(false)
+    }
+
+    void verificarAdmin()
+  }, [])
+
+  if (carregando) {
+    return <div>Carregando...</div>
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return <Outlet />
+}
+
 function App() {
   return (
-    <BrowserRouter>
+    <PeriodoDashboardProvider>
+      <BrowserRouter>
       <Routes>
         <Route
           path="/login"
@@ -98,15 +139,17 @@ function App() {
               element={<Dashboard />}
             />
 
-            <Route
-              path="/admin/clientes-rtf"
-              element={<ClientesRTF />}
-            />
+            <Route element={<RotaAdmin />}>
+  <Route
+    path="/admin/clientes-rtf"
+    element={<ClientesRTF />}
+  />
 
-            <Route
-  path="/admin/clientes-rtf/:empresaId"
-  element={<ClienteRTFDetalhes />}
-/>
+  <Route
+    path="/admin/clientes-rtf/:empresaId"
+    element={<ClienteRTFDetalhes />}
+  />
+</Route>
 
             <Route
               path="/produtos"
@@ -235,7 +278,8 @@ function App() {
           }
         />
       </Routes>
-    </BrowserRouter>
+          </BrowserRouter>
+    </PeriodoDashboardProvider>
   )
 }
 

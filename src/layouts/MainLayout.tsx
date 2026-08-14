@@ -9,10 +9,14 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  MenuItem,
+  TextField,
   Toolbar,
+  Typography,
 } from '@mui/material'
 
 import DashboardIcon from '@mui/icons-material/Dashboard'
+import { usePeriodoDashboard } from '../contexts/PeriodoDashboardContext'
 import InventoryIcon from '@mui/icons-material/Inventory'
 import CategoryIcon from '@mui/icons-material/Category'
 import PeopleIcon from '@mui/icons-material/People'
@@ -38,6 +42,13 @@ const larguraMenu = 240
 function MainLayout() {
   const navigate = useNavigate()
   const location = useLocation()
+
+  const {
+  mesSelecionado,
+  setMesSelecionado,
+  anoSelecionado,
+  setAnoSelecionado,
+} = usePeriodoDashboard()
 
   const [cadastrosAberto, setCadastrosAberto] =
     useState(true)
@@ -97,6 +108,10 @@ function sairModoEmpresa() {
 
     void carregarPerfil()
   }, [])
+
+if (!perfil) {
+  return null
+}
 
   return (
     <Box
@@ -632,9 +647,10 @@ background:
         <Box
   sx={{
     height: 70,
+    width: '100%',
     display: 'flex',
-    justifyContent: 'flex-end',
     alignItems: 'center',
+    justifyContent: 'flex-start',
     px: 3,
 
     borderBottom:
@@ -648,7 +664,190 @@ background:
     zIndex: 10,
   }}
 >
-          <NotificationBell />
+          
+          <Box
+  sx={{
+    height: 70,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 2,
+    px: 3,
+
+    borderBottom:
+      '1px solid rgba(148,163,184,0.10)',
+
+    background:
+      'linear-gradient(90deg, #07111f 0%, #0b1628 100%)',
+
+    position: 'sticky',
+    top: 0,
+    zIndex: 10,
+  }}
+>
+ {/* SAUDAÇÃO */}
+<Box
+  sx={{
+    lineHeight: 1.15,
+    flexShrink: 0,
+    mr: 'auto',
+    ml: -3,
+  }}
+>
+    <Typography
+      sx={{
+        color: '#fff',
+        fontWeight: 800,
+        fontSize: 25,
+        whiteSpace: 'nowrap',
+        letterSpacing: '-0.02em',
+      }}
+    >
+      {Number(
+        new Intl.DateTimeFormat('pt-BR', {
+          timeZone: 'America/Sao_Paulo',
+          hour: '2-digit',
+          hour12: false,
+        }).format(new Date()),
+      ) < 12
+        ? 'Bom dia'
+        : Number(
+            new Intl.DateTimeFormat('pt-BR', {
+              timeZone: 'America/Sao_Paulo',
+              hour: '2-digit',
+              hour12: false,
+            }).format(new Date()),
+          ) < 18
+        ? 'Boa tarde'
+        : 'Boa noite'} 👋
+    </Typography>
+
+    <Typography
+      sx={{
+        color: '#94a3b8',
+        fontSize: 13,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {new Date().toLocaleDateString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+      })}{' '}
+•{' '}
+{new Date().toLocaleTimeString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        hour: '2-digit',
+        minute: '2-digit',
+      })}
+    </Typography>
+  </Box>
+
+  {/* PERÍODO + NOTIFICAÇÕES */}
+  <Box
+    sx={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      gap: 1.5,
+      ml: 'auto',
+
+      '& .MuiOutlinedInput-root': {
+        height: 46,
+        color: '#f8fafc',
+        backgroundColor: 'rgba(8,20,38,0.85)',
+        borderRadius: '10px',
+
+        '& fieldset': {
+          borderColor: 'rgba(148,163,184,0.18)',
+        },
+
+        '&:hover fieldset': {
+          borderColor: 'rgba(212,175,55,0.40)',
+        },
+
+        '&.Mui-focused fieldset': {
+          borderColor: '#d4af37',
+        },
+      },
+
+      '& .MuiInputLabel-root': {
+        color: '#94a3b8',
+      },
+
+      '& .MuiSvgIcon-root': {
+        color: '#d4af37',
+      },
+    }}
+  >
+    <TextField
+      select
+      size="small"
+      label="Mês"
+      value={mesSelecionado}
+      onChange={(event) =>
+        setMesSelecionado(
+          Number(event.target.value),
+        )
+      }
+      sx={{
+  width: 100,
+  lineHeight: 1.15,
+  flexShrink: 0,
+  mr: 'auto',
+  ml: 98,
+}}
+>
+      {[
+        'Janeiro',
+        'Fevereiro',
+        'Março',
+        'Abril',
+        'Maio',
+        'Junho',
+        'Julho',
+        'Agosto',
+        'Setembro',
+        'Outubro',
+        'Novembro',
+        'Dezembro',
+      ].map((mes, index) => (
+        <MenuItem
+          key={mes}
+          value={index}
+        >
+          {mes}
+        </MenuItem>
+      ))}
+    </TextField>
+
+    <TextField
+      select
+      size="small"
+      label="Ano"
+      value={anoSelecionado}
+      onChange={(event) =>
+        setAnoSelecionado(
+          Number(event.target.value),
+        )
+      }
+      sx={{ width: 100 }}
+    >
+      {[2025, 2026, 2027, 2028].map(
+        (ano) => (
+          <MenuItem
+            key={ano}
+            value={ano}
+          >
+            {ano}
+          </MenuItem>
+        ),
+      )}
+    </TextField>
+
+    <NotificationBell />
+  </Box>
+</Box>
+
+
         </Box>
 
         <Box

@@ -103,7 +103,7 @@ export default function GraficoFaturamento({
               fontSize: '0.82rem',
             }}
           >
-            Evolução das vendas nos últimos 7 dias
+            Evolução das vendas no período selecionado
           </Typography>
         </Box>
       </Box>
