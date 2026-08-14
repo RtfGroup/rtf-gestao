@@ -46,8 +46,9 @@ export default function NovaCompra() {
   new URLSearchParams(window.location.search).get('lerNota') === '1'
 
 const inputNotaRef = useRef<HTMLInputElement | null>(null)
-
-  const [fornecedores, setFornecedores] = useState<FornecedorCompra[]>([])
+const hashesNotasLidasRef = useRef<Set<string>>(new Set())
+  
+const [fornecedores, setFornecedores] = useState<FornecedorCompra[]>([])
   const [produtos, setProdutos] = useState<ProdutoCompra[]>([])
 
   const [fornecedor, setFornecedor] = useState('')
@@ -253,6 +254,19 @@ function normalizarNome(texto: string) {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '')
+}
+
+async function gerarHashArquivo(arquivo: File) {
+  const buffer = await arquivo.arrayBuffer()
+
+  const hashBuffer = await crypto.subtle.digest(
+    'SHA-256',
+    buffer,
+  )
+
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 async function lerNotaFiscal(arquivo: File) {
@@ -676,9 +690,32 @@ onChange={async (event) => {
     return
   }
 
-  setFotosNota(arquivos)
+  const arquivosNovos: File[] = []
 
   for (const arquivo of arquivos) {
+    const hash = await gerarHashArquivo(arquivo)
+
+    if (hashesNotasLidasRef.current.has(hash)) {
+      console.warn(
+        'Foto da nota ignorada porque já foi processada:',
+        arquivo.name,
+      )
+
+      continue
+    }
+
+    hashesNotasLidasRef.current.add(hash)
+    arquivosNovos.push(arquivo)
+  }
+
+  if (arquivosNovos.length === 0) {
+    event.target.value = ''
+    return
+  }
+
+  setFotosNota(arquivosNovos)
+
+  for (const arquivo of arquivosNovos) {
     await lerNotaFiscal(arquivo)
   }
 
